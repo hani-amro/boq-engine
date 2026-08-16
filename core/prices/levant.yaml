@@ -1,0 +1,445 @@
+# ---------------------------------------------------------------------------
+# جدول أسعار — بلاد الشام (الأردن، سوريا، لبنان، فلسطين)
+# ---------------------------------------------------------------------------
+# هذا الملف بيانات وليس كوداً: المهندس يعدّله بنفسه دون لمس بايثون.
+#
+# ⚠️ تحذير — كل رقم هنا يتحوّل مباشرة إلى مال في عرض السعر.
+#
+# قاعدة الإصدارات (مهمة قانونياً):
+#   * جدول الأسعار المنشور لا يُعدَّل في مكانه أبداً. أي تغيير في فئة واحدة =
+#     ملف جديد بإصدار (version) جديد، مثل: levant-v1.1.0.yaml
+#   * السبب: كل عرض سعر يسجّل «المُعرّف + الإصدار + بصمة المحتوى» الذي سُعّر به،
+#     حتى يمكن إعادة إنتاج عرض عمره سنتان بالقرش الواحد أمام لجنة أو محكمة.
+#     إذا عُدِّل ملف منشور، ستكشفه الدالة verify_reproducible وتُعلن كسر التطابق.
+#   * الاكتشاف يتم بمحتوى الملف (meta.region + meta.version) لا باسمه؛ الاسم
+#     للراحة البشرية فقط.
+#
+# معنى الحقول:
+#   material_rate : فئة المواد للوحدة الواحدة بعملة meta.currency.
+#   labor_rate    : فئة العمالة (التركيب/التنفيذ) للوحدة الواحدة.
+#   unit          : يجب أن تطابق وحدة البند في core/rules/finishes.yaml تماماً،
+#                   وإلا رُفض التسعير بخطأ صريح (ضرب كمية بوحدة مختلفة = رقم بلا معنى).
+#   waste_in_rate : true (الافتراضي) يعني أن نسبة الهدر مُحتسَبة داخل فئة المواد،
+#                   فتُسعَّر المواد على الكمية الصافية المدفوعة في المستخلص.
+#                   false يعني فئة توريد صافية، فتُسعَّر المواد على كمية التوريد
+#                   (الصافي + الهدر) وإلا دفع المقاول الهدر من جيبه.
+# ---------------------------------------------------------------------------
+
+meta:
+  schema: price-book/1
+  id: levant-base
+  region: levant
+  currency: "USD"
+  version: "0.1.0"
+  effective_date: "2026-07-26"
+
+  # ⚠️ العلامة التي تمنع إرسال هذا الجدول إلى عميل. تُقرأ برمجياً في
+  # core/pricing.py (assert_client_ready) فترفض الواجهة إصدار عرض للعميل.
+  # لا تجعلها false إلا بعد إدخال فئات المكتب الحقيقية المسعّرة من السوق.
+  is_placeholder: true
+
+  placeholder_warning_ar: >-
+    ⚠️ تحذير: جميع الفئات في هذا الجدول أرقام أولية (PLACEHOLDER) موضوعة لتشغيل
+    النظام واختباره فقط، وليست أسعار سوق ولا تصلح لأي التزام تعاقدي. يجب أن
+    يستبدلها المعماري بفئات مكتبه الحقيقية المسعّرة من الموردين والمقاولين قبل
+    إرسال أي عرض سعر إلى عميل. إرسال عرض مبني على هذه الأرقام مسؤولية مباشرة
+    على المكتب.
+
+  source_note_ar: >-
+    أرقام أولية للتشغيل فقط، لم تُسعَّر من السوق ولم يراجعها كمّيات. الفئات
+    محرَّرة بالدولار الأمريكي كعملة مرساة، وتشمل التوريد والتركيب وفق وصف البند في
+    core/rules/finishes.yaml. تُستبدل بفئات المكتب الحقيقية قبل أي استعمال تجاري.
+
+  defaults:
+    # الهدر محتسب داخل فئة المواد افتراضياً — العرف السائد في المنطقة.
+    waste_in_rate: true
+
+  fx:
+    # الفئات مخزَّنة بالدولار الأمريكي عمداً: قائمة أسعار محرَّرة بعملة محلية متقلبة
+    # (ل.س / ل.ل) تفقد معناها خلال أسابيع، فتُخزَّن بعملة مرساة وتُحوَّل لحظة إصدار
+    # العرض بسعر صرف يُثبَّت ويُختم بالوقت ويُسجَّل على كل بند.
+    is_anchor: true
+
+    # false ⇒ يجوز إصدار العرض بالدولار مباشرة دون تحويل.
+    # اجعلها true إذا كان المكتب يفوتر حصراً بالعملة المحلية، عندها يرفض النظام
+    # التسعير ما لم يُزوَّد بسعر صرف مثبَّت (لن يخترع سعر صرف من عنده أبداً).
+    requires_conversion: false
+
+    note_ar: >-
+      عند الفوترة بعملة محلية يُمرَّر إلى price()/quote() سعر صرف مثبَّت عبر
+      FxRate.capture من الدولار إلى العملة المحلية مع ذكر مصدره (صرّاف، نشرة بنك
+      مركزي، عقد)؛ يُسجَّل السعر وختمه الزمني على كل بند وفي رأس العرض، وأي تغيّر
+      لاحق في الصرف لا يمسّ هذا العرض بعد إصداره.
+
+rates:
+
+  # ====================== أرضيات: بلاط وحجر وخشب ودهانات أرضيات ====================== #
+
+  # توريد وتركيب سيراميك أرضيات [TIL-CER-FLR]
+  ceramic_tile_floor:
+    material_rate: 12
+    labor_rate: 5
+    unit: "m2"
+
+  # توريد وتركيب بورسلان أرضيات (حتى 60×60) [TIL-POR-FLR]
+  porcelain_tile_floor:
+    material_rate: 16
+    labor_rate: 5.5
+    unit: "m2"
+
+  # توريد وتركيب بورسلان كبير المقاس (80×80، 60×120، 120×120) أرضيات [TIL-POR-LRG]
+  porcelain_large_format_floor:
+    material_rate: 26
+    labor_rate: 9
+    unit: "m2"
+
+  # توريد وتركيب بلاط رخام للأرضيات (مقصوص حسب المقاس) [STN-MRB-FLR]
+  marble_floor_slab:
+    material_rate: 45
+    labor_rate: 12
+    unit: "m2"
+
+  # توريد وتركيب بلاط جرانيت طبيعي للأرضيات [STN-GRN-FLR]
+  granite_floor:
+    material_rate: 55
+    labor_rate: 14
+    unit: "m2"
+
+  # توريد وتركيب بلاط موزاييك (كاشي) للأرضيات [TIL-TRZ-FLR]
+  terrazzo_tile_floor:
+    material_rate: 14
+    labor_rate: 6
+    unit: "m2"
+
+  # جلي وتلميع أرضيات الموزاييك/الرخام بعد التركيب [STN-GRD-POL]
+  floor_grinding_polishing:
+    material_rate: 2
+    labor_rate: 6
+    unit: "m2"
+
+  # توريد وتركيب باركيه HDF (لامينيت) عائم للأرضيات [PRQ-LAM-FLR]
+  laminate_parquet_floor:
+    material_rate: 14
+    labor_rate: 5
+    unit: "m2"
+
+  # توريد وتركيب باركيه خشب طبيعي/مهندس للأرضيات [PRQ-WOD-FLR]
+  engineered_wood_parquet_floor:
+    material_rate: 40
+    labor_rate: 12
+    unit: "m2"
+
+  # توريد وتركيب أرضيات فينيل SPC/LVT [PRQ-SPC-FLR]
+  vinyl_spc_floor:
+    material_rate: 18
+    labor_rate: 6
+    unit: "m2"
+
+  # توريد وتركيب بلاط خارجي مانع للانزلاق للبلكونات والتراسات [TIL-EXT-BAL]
+  external_antislip_tile_floor:
+    material_rate: 15
+    labor_rate: 6
+    unit: "m2"
+
+  # توريد وتنفيذ دهان إيبوكسي للأرضيات [FIN-EPX-FLR]
+  epoxy_floor_coating:
+    material_rate: 12
+    labor_rate: 8
+    unit: "m2"
+
+
+  # ====================== طبقات تحضير الأرضيات والروبة ====================== #
+
+  # فرشة مونة (رملة ناعمة) تحت البلاط [SCR-MOR-BED]
+  mortar_bedding_screed:
+    material_rate: 4
+    labor_rate: 4
+    unit: "m2"
+
+  # روبة إيبوكسي لفواصل بلاط الأرضيات [GRT-EPX-FLR]
+  epoxy_grout_floor_joints:
+    material_rate: 3
+    labor_rate: 3
+    unit: "m2"
+
+
+  # ====================== الوزرات (النعلات) — بالمتر الطولي ====================== #
+
+  # توريد وتركيب وزرة (نعلة) سيراميك ارتفاع 7–10 سم [TIL-CER-SKT]
+  ceramic_skirting:
+    material_rate: 2
+    labor_rate: 1.5
+    unit: "m"
+
+  # توريد وتركيب وزرة (نعلة) بورسلان مقصوصة من بلاط الأرضية [TIL-POR-SKT]
+  porcelain_skirting:
+    material_rate: 3
+    labor_rate: 2
+    unit: "m"
+
+  # توريد وتركيب وزرة (نعلة) رخام/حجر ارتفاع 7–10 سم [STN-MRB-SKT]
+  marble_skirting:
+    material_rate: 6
+    labor_rate: 3
+    unit: "m"
+
+  # توريد وتركيب وزرة MDF/PVC للباركيه [PRQ-MDF-SKT]
+  mdf_pvc_skirting:
+    material_rate: 3
+    labor_rate: 2
+    unit: "m"
+
+  # وزرة خشبية (نعلة خشب / سكيرتنج) بارتفاع 8–12 سم [WOD-SKR-INT]
+  wood_skirting:
+    material_rate: 7
+    labor_rate: 3
+    unit: "m"
+
+  # وزرة حجرية/رخامية — مدمجة في marble_skirting [STN-SKR-INT]
+  stone_skirting:
+    material_rate: 6
+    labor_rate: 3
+    unit: "m"
+
+
+  # ====================== الأدراج والعتبات ====================== #
+
+  # توريد وتركيب قلبات ونوايم درج رخام (شامل القائم والنائم والأنف) [STN-MRB-STR]
+  marble_stair_tread_riser:
+    material_rate: 55
+    labor_rate: 20
+    unit: "m"
+
+  # توريد وتركيب وزرة درج مائلة (نعلة درج) رخام [STN-MRB-RAK]
+  raking_stair_skirting:
+    material_rate: 12
+    labor_rate: 6
+    unit: "m"
+
+  # توريد وتركيب عتبات رخام للأبواب [STN-MRB-THR]
+  marble_door_threshold:
+    material_rate: 18
+    labor_rate: 6
+    unit: "no"
+
+
+  # ====================== القصارة والبياض ====================== #
+
+  # قصارة إسمنتية داخلية للجدران (طرطشة + بؤج ومرابيع + بطانة + وجه ناعم) [PLS-INT-WALL]
+  plaster_internal_wall_cement:
+    material_rate: 3
+    labor_rate: 5
+    unit: "m2"
+
+  # قصارة إسمنتية للأسقف (باطن البلاطة والجسور الساقطة) [PLS-INT-CEIL]
+  plaster_internal_ceiling:
+    material_rate: 3
+    labor_rate: 6
+    unit: "m2"
+
+  # طرطشة وبطانة إسمنتية خلف السيراميك (طبقة أساس بدون وجه ناعم) [PLS-BCK-TILE]
+  plaster_backing_behind_tile:
+    material_rate: 2.5
+    labor_rate: 4
+    unit: "m2"
+
+  # قصارة/بياض خارجي للواجهات (طرطشة إسمنتية + بطانة + وجه) [PLS-EXT-FAC]
+  plaster_external_render:
+    material_rate: 3.5
+    labor_rate: 7
+    unit: "m2"
+
+  # قصارة الكشفات والمرتدات حول الفتحات (جوانب + عتب + جلسة) [PLS-REV-JMB]
+  plaster_reveals_jambs:
+    material_rate: 1.5
+    labor_rate: 3
+    unit: "m"
+
+  # زوايا معدنية مجلفنة لحماية أحرف القصارة (كورنر بيد) [ACC-COR-BEAD]
+  corner_bead_metal:
+    material_rate: 1
+    labor_rate: 1
+    unit: "m"
+
+  # تلبيسة جبس ناعم (قصارة جبسية / جبصين) على الجدران والأسقف [PLS-GYP-SKIM]
+  gypsum_skim_coat:
+    material_rate: 2
+    labor_rate: 4
+    unit: "m2"
+
+
+  # ====================== المعجونة والدهانات ====================== #
+
+  # معجونة وصنفرة للجدران والأسقف تحضيراً للدهان [PNT-PUT-INT]
+  putty_filler_internal:
+    material_rate: 1.5
+    labor_rate: 2.5
+    unit: "m2"
+
+  # دهان إيمولسيون (بلاستيك مائي) داخلي للجدران — سيلر + وجهان [PNT-EMU-WALL]
+  paint_emulsion_internal_wall:
+    material_rate: 1.5
+    labor_rate: 2.5
+    unit: "m2"
+
+  # دهان إيمولسيون للأسقف (أبيض مطفي) — سيلر + وجهان [PNT-EMU-CEIL]
+  paint_emulsion_ceiling:
+    material_rate: 1.5
+    labor_rate: 3
+    unit: "m2"
+
+  # دهان زيتي/لميع (بوية زيت) للجدران والأشرطة [PNT-OIL-WALL]
+  paint_oil_enamel:
+    material_rate: 2.5
+    labor_rate: 3.5
+    unit: "m2"
+
+  # دهان خارجي للواجهات (أكريليك/ديكورا) — أساس خارجي + وجهان [PNT-EXT-FAC]
+  paint_external_facade:
+    material_rate: 3
+    labor_rate: 4
+    unit: "m2"
+
+
+  # ====================== العزل المائي ====================== #
+
+  # عزل مائي أسمنتي مرن لأرضيات الحمامات والمطابخ مع رفعة على الجدران [WPR-CEM-FLR]
+  waterproof_wet_floor_cementitious:
+    material_rate: 6
+    labor_rate: 5
+    unit: "m2"
+
+  # عزل مائي لجدران المنطقة الرطبة (خلف الدش/البانيو) حتى ارتفاع الرش [WPR-CEM-WALL]
+  waterproof_wet_wall_shower:
+    material_rate: 5
+    labor_rate: 4
+    unit: "m2"
+
+  # عزل مائي للشرفات والسطوح برولات بيتومينية (ممبرين) شامل التراكب والرفعات [WPR-MEM-BAL]
+  waterproof_balcony_membrane:
+    material_rate: 7
+    labor_rate: 5
+    unit: "m2"
+
+
+  # ====================== سيراميك الجدران والمناطق الرطبة ====================== #
+
+  # تبليط سيراميك/قيشاني للجدران في الحمامات والمطابخ (توريد وتركيب بلاصق وروبة) [TIL-CER-WALL]
+  wall_tile_ceramic_wet:
+    material_rate: 12
+    labor_rate: 7
+    unit: "m2"
+
+  # سيراميك ظهر المطبخ (بين سطح العمل والخزائن العلوية) [TIL-CER-SPLSH]
+  kitchen_backsplash_tile:
+    material_rate: 14
+    labor_rate: 8
+    unit: "m2"
+
+  # زوايا وبروفيلات إنهاء للسيراميك (PVC/ألمنيوم/ستانلس) للأحرف والنهايات [TIL-TRM-PVC]
+  tile_trim_profile:
+    material_rate: 2
+    labor_rate: 1.5
+    unit: "m"
+
+  # سيليكون مانع للعفن للفواصل الرطبة (التقاء الأرضية بالجدار والأركان والأدوات) [SEL-SIL-WET]
+  silicone_sealant_wet_joints:
+    material_rate: 1
+    labor_rate: 1
+    unit: "m"
+
+
+  # ====================== الجبس بورد وديكورات الجبس ====================== #
+
+  # سقف مستعار جبس بورد مسطح شامل الهيكل المعدني والمعجون والتحضير للدهان [GYP-CEIL-FLT]
+  gypsum_board_ceiling_flat:
+    material_rate: 11
+    labor_rate: 8
+    unit: "m2"
+
+  # نزلة جبس بورد (كشفة رأسية / بلك هيد) بين مناسيب السقف [GYP-CEIL-BLK]
+  gypsum_board_ceiling_bulkhead:
+    material_rate: 8
+    labor_rate: 7
+    unit: "m"
+
+  # تلبيس جدران / قواطع جبس بورد على هيكل معدني [GYP-WALL-LIN]
+  gypsum_board_wall_lining:
+    material_rate: 10
+    labor_rate: 7
+    unit: "m2"
+
+  # كشفات ومرتدات جبس بورد حول الفتحات (تجليد جوانب الأبواب والشبابيك) [GYP-REV-JMB]
+  gypsum_reveal_jamb:
+    material_rate: 5
+    labor_rate: 5
+    unit: "m"
+
+  # كرنيش جبس مزخرف (كورنيش بلدي / جبس عربي) بالمتر الطولي [GYP-CRN-DEC]
+  gypsum_cornice_decorative:
+    material_rate: 6
+    labor_rate: 5
+    unit: "m"
+
+  # وردة / روزيتة جبس مزخرفة وقطع الزينة المصبوبة (بالعدد) [GYP-ROS-DEC]
+  gypsum_rosette_decorative:
+    material_rate: 25
+    labor_rate: 10
+    unit: "no"
+
+  # باب تفتيش / فتحة خدمة في السقف المستعار (بالعدد) [GYP-ACC-HTC]
+  gypsum_access_hatch:
+    material_rate: 20
+    labor_rate: 8
+    unit: "no"
+
+
+  # ====================== التكسيات: حجر، ألوكوبوند، خشب ====================== #
+
+  # تكسية حجرية خارجية (طبزة / مسمسم / مفزّع) على الواجهات [STN-CLD-FAC]
+  stone_cladding_external_facade:
+    material_rate: 35
+    labor_rate: 20
+    unit: "m2"
+
+  # كشفات ومرتدات حجرية حول الفتحات وعتبات وجلسات الشبابيك [STN-REV-JMB]
+  stone_cladding_reveal_jamb:
+    material_rate: 14
+    labor_rate: 9
+    unit: "m"
+
+  # تكسية حجرية / رخامية داخلية لتلبيس الجدران [STN-CLD-INT]
+  stone_cladding_internal_wall:
+    material_rate: 40
+    labor_rate: 18
+    unit: "m2"
+
+  # تكسية ألوكوبوند (ألواح ألمنيوم مركبة) على هيكل ألمنيوم شاملة الملحقات [ACP-CLD-FAC]
+  aluminium_composite_cladding:
+    material_rate: 45
+    labor_rate: 20
+    unit: "m2"
+
+  # تكسية ألوكوبوند للأسقف الخارجية والبروزات (السوفيت) شاملة الفاشيا [ACP-CEIL-SFT]
+  aluminium_composite_ceiling_soffit:
+    material_rate: 42
+    labor_rate: 20
+    unit: "m2"
+
+  # تكسية جدران بالخشب (ألواح / قشرة طبيعية / MDF مقشور) على هيكل خلفي [WOD-CLD-WAL]
+  wood_cladding_wall:
+    material_rate: 35
+    labor_rate: 15
+    unit: "m2"
+
+  # تكسية أسقف بالخشب (سقف خشبي / شرائح مشرّحة معلقة) [WOD-CEIL-CLD]
+  wood_cladding_ceiling:
+    material_rate: 38
+    labor_rate: 16
+    unit: "m2"
+
+  # كشفات ومرتدات خشبية وحواف الإنهاء حول الفتحات [WOD-REV-JMB]
+  wood_cladding_reveal_jamb:
+    material_rate: 12
+    labor_rate: 7
+    unit: "m"

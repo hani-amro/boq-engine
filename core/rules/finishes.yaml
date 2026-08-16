@@ -1,0 +1,2401 @@
+# ---------------------------------------------------------------------------
+# قواعد حصر أعمال الأكساء والتشطيبات — بلاد الشام (الأردن، سوريا، لبنان، فلسطين)
+# ---------------------------------------------------------------------------
+# هذا الملف بيانات وليس كوداً: المهندس المعماري يعدّله بنفسه دون لمس بايثون.
+#
+# تحذير — كل رقم هنا يغيّر مالاً حقيقياً:
+#   * waste_pct           : نسبة الهدر. تغييرها يغيّر كمية التوريد (gross_qty) مباشرة،
+#                           وبالتالي يغيّر أمر الشراء وقيمة العرض. 0.10 تعني 10%.
+#   * deduct_threshold_m2 : حدّ الخصم — مساحة الفتحة التي دونها لا يُجرى خصم.
+#                           تغييره يغيّر الكمية الصافية (net_qty) وهي الكمية المدفوعة
+#                           في المستخلص. وهو «عُرف مهني» متفق عليه بين المكاتب وليس
+#                           قاعدة معيارية مُلزِمة، ولذلك هو بارامتر ظاهر وقابل للضبط،
+#                           ويجب أن يُعلَن في مقدمة جدول الكميات وأن يظهر في البيان
+#                           الحسابي (breakdown) لكل بند.
+#   * add_reveals         : مفتاح رئيسي. إذا كان false تُلغى كل إضافات الكشفات
+#                           والمرتدات في البند مهما كانت البارامترات الأخرى.
+#   * deduct_openings     : إذا كان false لا تُخصم فتحات الجدران إطلاقاً في هذا البند
+#                           (بنود الأرضيات مثلاً — الشباك لا علاقة له ببلاط الأرض).
+#
+# المعادلة (formula) تعبير حسابي مقيّد: + - * / وأقواس و min/max فقط، على أسماء
+# مُعرّفة سلفاً في core/rules_loader.py (هندسة الفراغ + بارامترات المواصفة). لا يوجد
+# eval لنص خام، ولا وصول إلى خصائص الكائنات — أي اسم غير معروف يُرفض بخطأ واضح.
+#
+# القاعدة الذهبية لمنع الازدواج: أي مساحة تظهر في بندين = مطالبة مزدوجة. البنود
+# التابعة (الجلي، الفرشة، الروبة، المعجونة، الدهان) تستنسخ صافي بندها الأصل عبر
+# parent_net_qty ولا تُعيد قياسه.
+# ---------------------------------------------------------------------------
+
+version: 1
+schema: finishes-rules/1
+region: levant
+units_ar:
+  m2: م٢
+  m: م.ط
+  "no": عدد
+  kg: كغم
+  L: لتر
+
+rules:
+
+  # ======================= أرضيات: بلاط وحجر =============================== #
+
+  ceramic_tile_floor:
+    code: TIL-CER-FLR
+    name_ar: "توريد وتركيب سيراميك أرضيات"
+    surface: floor
+    unit: m2
+    labor_included: true
+    formula: "floor_area - manual_deduct_area + door_reveal_strip"
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: true
+    waste_pct: 0.10
+    waste_modifiers:
+      laying_pattern:
+        diagonal: 0.05
+        herringbone: 0.05
+    spec_params:
+      tile_size: 60x60
+      grade: first
+      color_ref: null
+      laying_pattern: straight
+      joint_width_mm: 3
+      bedding: mortar
+      min_deduct_area_m2: 0.50
+      deduct_areas_m2: []
+      door_reveal_depth_m: 0.20
+      tile_door_reveal: true
+    deduction_rule_ar: >-
+      تُخصم فقط المساحات المصمتة أو الفراغات التي تساوي أو تتجاوز 0.50 م٢ (أعمدة داخل
+      الحيز، مناور، فتحة درج، قاعدة بانيو 1.70×0.70=1.19 م٢ إذا رُكّب قبل البلاط). لا
+      تُخصم: الصفايات وبالوعات الأرضية، أعمدة أو دكات أقل من 0.50 م٢، مواسير الصرف،
+      قواعد المغاسل المعلقة. فتحات الأبواب والشبابيك لا علاقة لها ببند الأرضية إطلاقاً —
+      الشباك لا يُخصم ولا يُضاف، والباب يُضاف عنه شريط بعرض الفتحة × عمق المرتد (0.20 م
+      افتراضياً) إلا إذا قيست عتبة رخام لنفس الباب فعندها tile_door_reveal=false لذلك
+      الباب حتى لا تُحسب المساحة مرتين. حد الـ 0.50 م٢ عُرف مهني وليس قانوناً، ويجب أن
+      يكون بارامتراً قابلاً للضبط (min_deduct_area_m2) لأن بعض المكاتب تستعمل 0.25 م٢
+      وبعضها 1.00 م٢.
+    waste_rationale: >-
+      10% is the Levant default for 30x30-60x60 ceramic in residential rooms: cut loss
+      at the four perimeter runs (a room is rarely a whole number of tiles in either
+      direction and the offcut of one wall seldom fits the opposite wall), breakage on
+      site (ceramic body is weaker than porcelain), shade/calibre sorting rejects, plus
+      2-3 spare boxes kept for future repair since the production batch/tone disappears
+      from the market. Drop to 0.07 for open halls > 40 m2 with few cuts; add 0.05 for
+      diagonal laying and 0.03 for many re-entrant corners.
+    notes_ar: >-
+      تُقاس المساحة صافية بين وجوه الجدران بعد اللياسة (وليس على محاور الجدران) — إذا كان
+      المضلع مأخوذاً من المخطط الإنشائي يجب طرح سماكة اللياسة من كل جانب. البلاط يُفرش
+      تحت خزائن المطبخ السفلية ولا تُخصم مساحتها ما لم تنص المواصفة صراحةً. السعر شامل
+      التوريد والتركيب والمونة أو اللاصق والروبة والتنظيف والحماية. الوزرة لا تدخل في هذا
+      البند وتُقاس م.ط منفصلة. يجب أن يُظهر البيان الحسابي: مساحة الأرضية، ثم كل خصم مع
+      سببه، ثم الإضافات، ثم الصافي، ثم نسبة الهدر ومقدارها، ثم الإجمالي.
+
+  porcelain_tile_floor:
+    code: TIL-POR-FLR
+    name_ar: "توريد وتركيب بورسلان أرضيات (حتى 60×60)"
+    surface: floor
+    unit: m2
+    labor_included: true
+    formula: "floor_area - manual_deduct_area + door_reveal_strip"
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: true
+    waste_pct: 0.10
+    waste_modifiers:
+      laying_pattern:
+        diagonal: 0.05
+        herringbone: 0.05
+    spec_params:
+      tile_size: 60x60
+      finish: matt
+      rectified: true
+      laying_pattern: straight
+      joint_width_mm: 2
+      adhesive_class: C2TE
+      min_deduct_area_m2: 0.50
+      deduct_areas_m2: []
+      door_reveal_depth_m: 0.20
+      tile_door_reveal: true
+    deduction_rule_ar: >-
+      نفس قاعدة السيراميك حرفياً: خصم ما مساحته ≥ 0.50 م٢ فقط (عُرف قابل للضبط)، لا خصم
+      للصفايات ولا للأعمدة الصغيرة، لا علاقة لفتحات الشبابيك، وإضافة شريط مرتد الباب ما لم
+      تُقس عتبة. إضافة خاصة بالبورسلان المقصوص: إذا كان التنفيذ بفواصل 2 مم فإن أي انحراف
+      في الجدار يُعالج بالقص لا بالفاصل، ولذلك يرتفع الهدر لا الكمية الصافية.
+    waste_rationale: >-
+      Same 10% as ceramic for <=60x60. Porcelain breaks less in handling but cuts cost
+      more material: the rectified edge means a chipped cut is unusable (no joint to hide
+      it), and blade loss on a 9-10 mm porcelain body is real. Batch/tone matching also
+      forces the contractor to over-order in one lot.
+    notes_ar: >-
+      البورسلان المقصوص يُركّب بفواصل 1.5–3 مم وغير المقصوص بفواصل 3–5 مم. عند التركيب
+      على لاصق مباشرة يجب أن يكون تحته بند فرشة مونة أو صبة تسوية مستقلة — إن لم يُفرد
+      فالسعر شامل. للمساحات المتصلة التي تتجاوز 30 م٢ تُظهر فواصل تمدد وتُقاس م.ط منفصلة
+      ولا تُخصم من مساحة البلاط.
+
+  porcelain_large_format_floor:
+    code: TIL-POR-LRG
+    name_ar: "توريد وتركيب بورسلان كبير المقاس (80×80، 60×120، 120×120) أرضيات"
+    surface: floor
+    unit: m2
+    labor_included: true
+    formula: "floor_area - manual_deduct_area + door_reveal_strip"
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: true
+    waste_pct: 0.15
+    waste_modifiers:
+      tile_size:
+        120x260: 0.05
+    spec_params:
+      tile_size: 120x60
+      thickness_mm: 10
+      finish: matt
+      leveling_system: clips
+      adhesive_class: C2TES1
+      back_buttering: true
+      min_deduct_area_m2: 0.50
+      deduct_areas_m2: []
+      door_reveal_depth_m: 0.20
+      tile_door_reveal: true
+    deduction_rule_ar: >-
+      قاعدة الخصم كما هي (≥ 0.50 م٢)، لكن مع تحفظ عملي يجب أن يظهر في البيان الحسابي: خصم
+      فتحة صغيرة من بلاطة 120×60 لا يوفر مادة لأن البلاطة تُقص وتُهدر بالكامل. لذلك يوصى
+      في المقاسات الكبيرة برفع حد الخصم إلى 1.00 م٢ بالاتفاق مع المالك، أو الإبقاء على
+      0.50 م٢ مع نسبة هدر أعلى (وهو الافتراضي هنا).
+    waste_rationale: >-
+      15% (12-18% realistic band). Three compounding causes: (1) an offcut from a 1.20 m
+      tile is almost never reusable elsewhere in a residential plan, so the cut loss is
+      nearly the full tile at every wall; (2) breakage during handling, transport and
+      back-buttering of thin large slabs is materially higher - a cracked 120x120 is
+      1.44 m2 gone at once; (3) the leveling-clip system and the need for perfect
+      flatness cause rejects. Raise to 0.20 for 120x260 slabs / book-matched patterns.
+    notes_ar: >-
+      يجب أن ينص البند على نظام الاستواء (كلبسات) وعلى الدهن المزدوج للاصق لأنهما تكلفة
+      عمالة حقيقية. تُقاس المساحة م٢ ولا تُقاس بالقطعة. من أكبر أسباب النزاع مطالبة
+      المقاول بقياس البلاطة كاملة عند القص — العرف المهني أن الدفع على المساحة الصافية
+      المركّبة فقط والهدر يُغطى بنسبة الهدر المتفق عليها، ويجب النص على ذلك في المواصفة.
+
+  marble_floor_slab:
+    code: STN-MRB-FLR
+    name_ar: "توريد وتركيب بلاط رخام للأرضيات (مقصوص حسب المقاس)"
+    surface: floor
+    unit: m2
+    labor_included: true
+    formula: "floor_area - manual_deduct_area + door_reveal_strip"
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: true
+    waste_pct: 0.15
+    spec_params:
+      marble_type: null
+      slab_thickness_cm: 2
+      finish: polished
+      vein_match: false
+      piece_size: null
+      edge_treatment: null
+      min_deduct_area_m2: 0.50
+      deduct_areas_m2: []
+      door_reveal_depth_m: 0.20
+      tile_door_reveal: true
+    deduction_rule_ar: >-
+      خصم المساحات ≥ 0.50 م٢ فقط (عُرف قابل للضبط). خصوصية الرخام: القطع الخاصة (الشرائح
+      المحيطية، الميدالية في الوسط، الكادر/البردورة المحيطة) تُفرد ببنود مستقلة م.ط أو
+      عدداً وتُخصم مساحتها من الأرضية الحقلية حتى لا تُحسب مرتين. لا تُخصم فتحات الصرف ولا
+      فتحات الأبواب، والعتبة تُفرد عدداً.
+    waste_rationale: >-
+      15% net-to-slab loss for standard sizes, and this is the honest minimum: marble
+      arrives as irregular slabs that must be cut to size, blocks contain veins, cracks
+      and colour bands that are rejected, and the saw kerf plus edge trimming eats the
+      slab perimeter. Push to 0.20-0.25 for strongly veined stone, book-matching, or
+      when the client selects slabs himself; drop to 0.10 for commercial-grade uniform
+      stone bought as pre-cut 60x60 tiles.
+    notes_ar: >-
+      يجب التمييز في المواصفة بين الرخام المستورد المقصوص جاهزاً (60×60 أو 40×40) والرخام
+      المقصوص من السلاب حسب المقاس — الفرق في الهدر وحده يصل 10%. الرخام يُركّب عادةً على
+      فرشة مونة أسمنتية مع مادة رابطة لا على لاصق، ويجب النص على مادة عازلة أسفله في
+      المناطق الرطبة منعاً للتبقّع. الجلي والتلميع بعد التركيب بند مستقل بنفس المساحة
+      الصافية. في الأردن وفلسطين تُقاس القطع الخاصة (عتبات، جلسات، درج) بالمتر الطولي
+      والأرضيات بالمتر المربع — لا تخلط بينهما.
+
+  granite_floor:
+    code: STN-GRN-FLR
+    name_ar: "توريد وتركيب بلاط جرانيت طبيعي للأرضيات"
+    surface: floor
+    unit: m2
+    labor_included: true
+    formula: "floor_area - manual_deduct_area + door_reveal_strip"
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: true
+    waste_pct: 0.12
+    spec_params:
+      granite_type: null
+      slab_thickness_cm: 2
+      finish: polished
+      piece_size: null
+      min_deduct_area_m2: 0.50
+      deduct_areas_m2: []
+      door_reveal_depth_m: 0.20
+      tile_door_reveal: true
+    deduction_rule_ar: >-
+      نفس قاعدة الرخام: خصم ≥ 0.50 م٢ فقط (عُرف قابل للضبط)، وفصل القطع الخاصة والبردورات
+      ببنود مستقلة مع خصم مساحتها. لا خصم للصفايات ولا للفتحات في الجدران.
+    waste_rationale: >-
+      12%. Granite is more homogeneous than marble so fewer aesthetic rejects, but it is
+      harder: slower cutting, more blade consumption, and chipped edges on cuts are
+      common because the stone is brittle at the arris. Also usually specified in larger
+      pieces (entrance lobbies, stair treads) where offcuts are unusable.
+    notes_ar: >-
+      يُستعمل غالباً في المداخل والسلالم والمناطق ذات الحركة العالية. يجب النص على
+      المعالجة السطحية (مجلي / مشعول / حبحبة / مطقطق) لأنها تغيّر السعر جوهرياً ولا تغيّر
+      الكمية. الجرانيت يصل مجلياً من المصنع فلا يُقاس له بند جلي إلا بنص صريح.
+
+  terrazzo_tile_floor:
+    code: TIL-TRZ-FLR
+    name_ar: "توريد وتركيب بلاط موزاييك (كاشي) للأرضيات"
+    surface: floor
+    unit: m2
+    labor_included: true
+    formula: "floor_area - manual_deduct_area + door_reveal_strip"
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: true
+    waste_pct: 0.07
+    spec_params:
+      tile_size: 30x30
+      aggregate_type: null
+      color: null
+      border_pattern: null
+      min_deduct_area_m2: 0.50
+      deduct_areas_m2: []
+      door_reveal_depth_m: 0.20
+      tile_door_reveal: true
+    deduction_rule_ar: >-
+      خصم ≥ 0.50 م٢ فقط (عُرف قابل للضبط). البردورة أو الإطار الملون المحيط (الكادر) يُفرد
+      م.ط ويُخصم من المساحة الحقلية. لا خصم للصفايات ولا للفتحات الجدارية. بند الجلي
+      والتلميع إلزامي مع هذا البند ويُقاس بنفس الصافي عبر STN-GRD-POL.
+    waste_rationale: >-
+      7%. Terrazzo tiles are locally produced in regular 25x25/30x30/40x40 modules and
+      are cheap, so cut loss is modest and offcuts are reusable; but the cement body is
+      brittle and 3-4% breaks in transport and handling. No pattern-matching loss on
+      plain colours; add 3% if a coloured border pattern must be aligned.
+    notes_ar: >-
+      يُركّب على فرشة مونة سماكة 3–5 سم ثم يُجلى ويُلمّع بعد التركيب — الجلي بند مستقل.
+      هذا هو البلاط التقليدي في سوريا ولبنان والأردن وفلسطين ويُسمى «كاشي» في العراق
+      و«بلاط سماقي/ملون» في بعض مناطق فلسطين. سماكة البلاطة 2.5–3 سم وهي أثقل بكثير من
+      السيراميك ويجب مراعاة ذلك في الأحمال.
+
+  floor_grinding_polishing:
+    code: STN-GRD-POL
+    name_ar: "جلي وتلميع أرضيات الموزاييك/الرخام بعد التركيب"
+    surface: floor
+    unit: m2
+    labor_included: true
+    formula: "parent_net_qty"
+    follows_rule: true
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: false
+    waste_pct: 0.0
+    spec_params:
+      parent_net_qty: 0.0
+      grinding_passes: 3
+      grit_sequence: null
+      crystallization: false
+      sealer_type: null
+    deduction_rule_ar: >-
+      يتبع خصم بند الأرضية المرتبط به حرفياً — لا يجوز أن تختلف مساحة الجلي عن مساحة
+      البلاط في نفس الحيز؛ يجب على المحرك أن يربط هذا البند بـ rule_key الأرضية ويستنسخ
+      صافيها عبر parent_net_qty. المساحات المغطاة بالأثاث الثابت تُجلى ولا تُخصم. الدرج
+      والوزرة يُجليان ضمن بنديهما وليس هنا منعاً للازدواج.
+    waste_rationale: >-
+      Zero material waste by definition - this is a labour + consumables item (abrasive
+      stones, water, power). The consumable cost belongs in the unit rate, not in a
+      waste percentage; inflating the quantity here would double-pay the contractor for
+      area he never grinds.
+    notes_ar: >-
+      يُقاس بالمتر المربع للمساحة المجلية فعلياً. يجب النص على عدد مراحل الجلي
+      (خشن/ناعم/تلميع) وعلى معالجة الأطراف والزوايا يدوياً لأن الماكينة لا تصل إليها. في
+      العرف الشامي يُنفَّذ الجلي بعد اكتمال الأعمال الرطبة وقبل الدهان النهائي. لا يُقاس مع
+      البورسلان أو السيراميك إطلاقاً.
+
+  # ======================= أرضيات: باركيه وفينيل ودهانات =================== #
+
+  laminate_parquet_floor:
+    code: PRQ-LAM-FLR
+    name_ar: "توريد وتركيب باركيه HDF (لامينيت) عائم للأرضيات"
+    surface: floor
+    unit: m2
+    labor_included: true
+    formula: "floor_area - manual_deduct_area"
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: false
+    waste_pct: 0.08
+    waste_modifiers:
+      laying_pattern:
+        diagonal: 0.04
+        herringbone: 0.07
+        chevron: 0.07
+    spec_params:
+      thickness_mm: 8
+      ac_class: AC4
+      plank_size: null
+      underlay_type: foam
+      laying_pattern: straight
+      expansion_gap_mm: 10
+      min_deduct_area_m2: 0.50
+      deduct_areas_m2: []
+    deduction_rule_ar: >-
+      خصم المساحات ≥ 0.50 م٢ فقط (عُرف قابل للضبط). خصوصية الباركيه: لا يُضاف شريط تحت
+      الباب لأن الباركيه لا يمر داخل فتحة الباب بل يُنهى ببروفيل انتقالي (بند مستقل م.ط أو
+      عدداً). فتحات الشبابيك لا علاقة لها بالبند. فجوة التمدد المحيطية 8–10 مم لا تُخصم
+      لأنها تُغطى بالوزرة وتُعتبر ضمن المساحة المقاسة.
+    waste_rationale: >-
+      8% for straight/staggered laying: end-cut loss at the two ends of every row (the
+      offcut of one row starts the next only if it exceeds ~30 cm, otherwise it is
+      scrap), plus rejected planks with factory defects. 12% for 45 diagonal laying;
+      15% for herringbone - each plank is cut to a fixed module and the pattern cannot
+      absorb random lengths.
+    notes_ar: >-
+      يتطلب أرضية مستوية (انحراف ≤ 3 مم على 2 م) — إن لم تكن كذلك يجب إفراد بند صبة تسوية
+      ذاتية. الفوم العازل والعازل البخاري يُقاسان بنفس المساحة الصافية. البروفيلات
+      الانتقالية عند الأبواب وبين الغرف تُقاس بالعدد أو م.ط ولا تدخل في المتر المربع. لا
+      يُركّب في الحمامات والمطابخ في العرف المحلي ويجب أن يرفض المحرك إسناده لفراغ bath.
+
+  engineered_wood_parquet_floor:
+    code: PRQ-WOD-FLR
+    name_ar: "توريد وتركيب باركيه خشب طبيعي/مهندس للأرضيات"
+    surface: floor
+    unit: m2
+    labor_included: true
+    formula: "floor_area - manual_deduct_area"
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: false
+    waste_pct: 0.12
+    waste_modifiers:
+      laying_pattern:
+        diagonal: 0.04
+        herringbone: 0.06
+        chevron: 0.06
+    spec_params:
+      wood_species: oak
+      thickness_mm: 14
+      wear_layer_mm: 3
+      plank_size: null
+      laying_pattern: straight
+      fixing_method: floating
+      finish_coats: 2
+      min_deduct_area_m2: 0.50
+      deduct_areas_m2: []
+    deduction_rule_ar: >-
+      خصم ≥ 0.50 م٢ فقط (عُرف قابل للضبط). لا إضافة لمرتد الباب (بروفيل انتقالي مستقل).
+      فجوة التمدد المحيطية لا تُخصم. الشرائح المحيطية (البردورة/الفريز) إن وُجدت تُفرد م.ط
+      وتُخصم مساحتها.
+    waste_rationale: >-
+      12% for straight laying, higher than laminate for two genuinely different reasons:
+      natural wood arrives in mixed lengths and mixed grain/tone and the installer sorts
+      and rejects boards (knots, sap, colour outliers) at 4-6% before he even cuts; the
+      remainder is normal end-cut loss. Herringbone/chevron reaches 18% because every
+      board is trimmed to an exact module and the mitres are unrecoverable.
+    notes_ar: >-
+      يجب النص على طريقة التثبيت (لصق كامل / تعشيق عائم / تثبيت على مدادات) لأنها تغيّر
+      العمالة والسماكة. عند السنفرة والورنشة على الموقع تُفرد بنودها بنفس المساحة الصافية
+      وبعدد الأوجه المحدد. الخشب الطبيعي حساس للرطوبة: عازل بخاري ورطوبة صبة ≤ 2.5% قبل
+      التركيب — شرط تسليم لا كمية.
+
+  vinyl_spc_floor:
+    code: PRQ-SPC-FLR
+    name_ar: "توريد وتركيب أرضيات فينيل SPC/LVT"
+    surface: floor
+    unit: m2
+    labor_included: true
+    formula: "floor_area - manual_deduct_area + door_reveal_strip"
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: true
+    waste_pct: 0.08
+    waste_modifiers:
+      laying_pattern:
+        diagonal: 0.04
+        herringbone: 0.07
+        chevron: 0.07
+    spec_params:
+      thickness_mm: 5
+      wear_layer_micron: 500
+      plank_size: null
+      fixing_method: click
+      underlay_type: ixpe
+      laying_pattern: straight
+      min_deduct_area_m2: 0.50
+      deduct_areas_m2: []
+      door_reveal_depth_m: 0.20
+      tile_door_reveal: false
+    deduction_rule_ar: >-
+      خصم ≥ 0.50 م٢ فقط (عُرف قابل للضبط). لا إضافة لمرتد الباب افتراضياً — يُنهى ببروفيل.
+      في حالة اللاصق الكامل (glue-down) يجوز تمرير الفينيل داخل فتحة الباب وعندها يُضاف
+      الشريط بعرض الفتحة × عمق المرتد كما في السيراميك؛ يُضبط بالبارامتر tile_door_reveal.
+    waste_rationale: >-
+      8% straight-lay. Cutting is by score-and-snap so cut loss is low and offcuts are
+      reusable, but SPC planks are supplied in fixed lengths with a locking edge that
+      must not be damaged, and the first/last row of every room is ripped to width.
+      12% for diagonal, 15% for herringbone.
+    notes_ar: >-
+      بديل حديث شائع للباركيه لأنه مقاوم للماء ويُسمح به في المطابخ. تُقاس المساحة الصافية
+      م٢ كالباركيه. البروفيلات والوزرة تُقاس م.ط منفصلة. يجب النص على استواء السطح لأن SPC
+      رقيق ويُظهر كل عيوب الصبة.
+
+  external_antislip_tile_floor:
+    code: TIL-EXT-BAL
+    name_ar: "توريد وتركيب بلاط خارجي مانع للانزلاق للبلكونات والتراسات"
+    surface: floor
+    unit: m2
+    labor_included: true
+    formula: "(floor_area - manual_deduct_area) * slope_factor"
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: false
+    waste_pct: 0.12
+    spec_params:
+      tile_size: 30x30
+      slip_rating: R11
+      frost_resistant: true
+      slope_pct: 1.5
+      drip_edge: true
+      adhesive_class: C2TE
+      min_deduct_area_m2: 0.50
+      deduct_areas_m2: []
+    deduction_rule_ar: >-
+      خصم ≥ 0.50 م٢ فقط. لا تُخصم الصفاية ولا مواسير التصريف ولا قواعد الأعمدة أو
+      الدرابزين إذا قلّت عن الحد. الأرضية ذات الميول تُقاس على المسقط الأفقي (عُرف ثابت في
+      المنطقة) ما لم يتجاوز الميل 15% فتُقاس المساحة المائلة الحقيقية — وهذا ما يفعله
+      slope_factor آلياً. قطعة الحافة ذات الأنف والقطرة تُفرد م.ط ويُخصم عرضها من المساحة
+      الحقلية.
+    waste_rationale: >-
+      12%. Balconies are small and irregular: the perimeter-to-area ratio is the worst
+      of any space, every tile meets a slope, a drain, a parapet or a drip edge, and the
+      falls force diagonal cuts that produce unusable wedges. Add the exposed-edge
+      pieces that get chipped during the nosing cut.
+    notes_ar: >-
+      يجب أن يسبق هذا البند بند عزل مائي يُقاس م٢ مع مرتد صعوداً على الجدار 20–30 سم — لا
+      تدرجه في هذا البند. الميول 1–2% باتجاه الصفاية. البلكونات تُقاس من وجه الجدار
+      الخارجي حتى الوجه الداخلي للدرابزين. عتبة باب البلكونة تُقاس عدداً وتُخصم من فراغ
+      واحد فقط (لا من الاثنين).
+
+  epoxy_floor_coating:
+    code: FIN-EPX-FLR
+    name_ar: "توريد وتنفيذ دهان إيبوكسي للأرضيات"
+    surface: floor
+    unit: m2
+    labor_included: true
+    formula: "floor_area - manual_deduct_area"
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: false
+    waste_pct: 0.08
+    spec_params:
+      system_type: self_leveling
+      coats: 2
+      dft_micron: 1000
+      primer: epoxy_primer
+      coving_height_cm: 10
+      consumption_kg_m2: 1.6
+      min_deduct_area_m2: 0.50
+      deduct_areas_m2: []
+    deduction_rule_ar: >-
+      خصم ≥ 0.50 م٢ فقط (عُرف قابل للضبط). لا تُخصم الصفايات ولا فتحات المرور الصغيرة.
+      الوزرة المقوسة الصاعدة على الجدار (كوفينغ) لا تُحسب ضمن المتر المربع بل تُفرد م.ط
+      لأن عمالتها تختلف جذرياً — وهذا مصدر نزاع متكرر عندما يطالب المقاول باحتسابها مساحة.
+    waste_rationale: >-
+      8% material loss: two-component epoxy has a pot life, so any mixed batch not
+      applied before it gels is thrown away; add roller/squeegee retention, substrate
+      absorption above the theoretical DFT on porous screed, and losses in the mixing
+      pails. This is a material-consumption waste, not a cutting waste.
+    notes_ar: >-
+      الكمية م٢ بغض النظر عن عدد الأوجه — عدد الأوجه وسماكة الفيلم الجاف تُحدد في المواصفة
+      وتنعكس في السعر لا في الكمية. تحضير السطح (تخشين/شوط/سنفرة ميكانيكية) يُدرج في السعر
+      أو يُفرد بنداً بنفس المساحة. الاستهلاك للشراء = الكمية × consumption_kg_m2 × coats.
+
+  mortar_bedding_screed:
+    code: SCR-MOR-BED
+    name_ar: "فرشة مونة (رملة ناعمة) تحت البلاط"
+    surface: floor
+    unit: m2
+    labor_included: true
+    formula: "parent_net_qty"
+    follows_rule: true
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: false
+    waste_pct: 0.05
+    spec_params:
+      parent_net_qty: 0.0
+      bed_thickness_m: 0.04
+      mix_ratio: "1:5"
+      sand_type: fine
+      additive: null
+      levels_and_falls: true
+    deduction_rule_ar: >-
+      يتبع خصم بند الأرضية المرتبط به حرفياً (≥ 0.50 م٢). لا يجوز أن تختلف مساحة الفرشة عن
+      مساحة البلاط فوقها. عند وجود ميول تُقاس على المسقط الأفقي مثل البلاط، والسماكة
+      المتغيرة تُعالج بالسماكة المتوسطة في حساب الحجم لا في المساحة.
+    waste_rationale: >-
+      5% on the area basis is only a tolerance for over-run at edges and thresholds. The
+      real waste here is volumetric: mortar spillage, over-thickness where the slab
+      dips, and material left in the mixer run 10% of volume, plus sand bulking of ~25%.
+      Apply the 10% at the volume conversion in pricing, not to the m2 quantity, or you
+      double-count.
+    notes_ar: >-
+      في العرف الشامي لا يُفرد هذا البند عادةً بل يُدرج في سعر البلاط «شامل المونة» —
+      أفرده فقط عند تغيّر السماكة جوهرياً (طبقة إحلال 5–10 سم فوق العزل أو تصحيح مناسيب).
+      يُفضّل قياسه بالمتر المكعب إذا زادت السماكة عن 7 سم. الحجم للشراء = الكمية ×
+      bed_thickness_m. المحرك يجب أن يمنع قياسه مع الباركيه العائم الذي يحتاج صبة تسوية
+      ذاتية لا فرشة رملة.
+
+  epoxy_grout_floor_joints:
+    code: GRT-EPX-FLR
+    name_ar: "روبة إيبوكسي لفواصل بلاط الأرضيات"
+    surface: floor
+    unit: m2
+    labor_included: true
+    formula: "parent_net_qty"
+    follows_rule: true
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: false
+    waste_pct: 0.10
+    spec_params:
+      parent_net_qty: 0.0
+      grout_type: epoxy
+      joint_width_mm: 3
+      joint_depth_mm: 8
+      tile_L_mm: 600
+      tile_W_mm: 600
+      density_kg_dm3: 1.6
+      color: null
+    deduction_rule_ar: >-
+      يتبع خصم بند البلاط المرتبط به حرفياً (≥ 0.50 م٢). لا تُقاس الروبة بطول الفواصل م.ط
+      في العرف المحلي بل بمساحة البلاط. الفواصل المحيطية عند الجدران وفواصل التمدد تُملأ
+      بمادة مرنة وتُفرد م.ط منفصلة ولا تُحسب هنا — وهذا مصدر نزاع لأن المقاول يعتبرها ضمن
+      الروبة.
+    waste_rationale: >-
+      10%. Epoxy grout is two-component with a short pot life, so unused mixed batches
+      are discarded; a large share of the material is squeegeed onto the tile face and
+      washed off during cleaning; and the emulsion pad/wash cycle removes more than the
+      theoretical joint volume. Cement grout would be 5-7%.
+    notes_ar: >-
+      يُفرد في الحمامات والمطابخ والمناطق الرطبة أو حين يطلب المالك روبة إيبوكسي؛ خلاف ذلك
+      الروبة الأسمنتية مدرجة في سعر البلاط. استهلاك المادة للشراء =
+      ((tile_L + tile_W) / (tile_L × tile_W)) × joint_width_mm × joint_depth_mm ×
+      density_kg_dm3 لكل م٢. يجب النص على اللون ورقم المنتج لأن اختلاف اللون بين الدفعات
+      عيب ظاهر.
+
+  # ============================ وزرة (نعلة) =============================== #
+  # كل بنود الوزرة طولية: خصم عرض كل باب وقنطرة بالكامل بلا حد أدنى، ولذلك
+  # deduct_openings=false و deduct_threshold_m2=0.0 (الحدّ لا ينطبق على بند طولي).
+
+  ceramic_skirting:
+    code: TIL-CER-SKT
+    name_ar: "توريد وتركيب وزرة (نعلة) سيراميك ارتفاع 7–10 سم"
+    aliases: [TIL-CER-SKIRT]
+    surface: skirting
+    unit: m
+    labor_included: true
+    formula: >-
+      wet_room_factor * (perimeter_m - skirting_door_deduct - full_height_window_run
+      - fitted_units_len_m - wall_tiled_len_m
+      + reveals_on * (door_jamb_returns + column_returns_m))
+    deduct_openings: false
+    deduct_threshold_m2: 0.0
+    add_reveals: true
+    waste_pct: 0.10
+    spec_params:
+      skirt_height_m: 0.07
+      tile_size_m: 0.60
+      profile: cut_from_floor_tile
+      cut_from_floor_tile: true
+      blade_kerf_m: 0.004
+      jamb_returns_m: 0.0
+      count_door_returns: false
+      door_return_m: 0.05
+      fitted_units_len_m: 0.0
+      wall_tiled_len_m: 0.0
+      column_returns_m: 0.0
+      window_to_floor: false
+      skirting_deduct_doors: true
+      skip_wet_rooms: true
+      floor_clad_area_m2: 0.0
+    deduction_rule_ar: >-
+      تُخصم فتحات الأبواب والقناطر بعرضها الصافي بالكامل ومهما صغرت — حد الـ 0.50 م٢ لا
+      ينطبق هنا إطلاقاً لأن البند طولي لا مساحي، وهذا أشهر نزاع في بند الوزرة (المقاول
+      يقدّم المحيط كاملاً). الشبابيك لا تُخصم لأن جلستها أعلى من الأرضية، إلا الشباك
+      الفرنسي/باب البلكونة النازل حتى الأرضية فيُخصم (window_to_floor أو يُنمذج ككائن
+      kind=door). لا تُقاس وزرة خلف خزائن المطبخ السفلية والخزائن الثابتة
+      (fitted_units_len_m)، ولا على أي جدار يصل فيه السيراميك الجداري إلى الأرضية
+      (wall_tiled_len_m) — لذلك الحمامات والمطابخ المكسوّة كاملاً لا وزرة فيها
+      (skip_wet_rooms). والاختبار هو التكسية المقيسة فعلاً لا نوع الفراغ: يُصفَّر البند
+      فقط إذا قِيست في الفراغ نفسه تكسية جدارية نازلة حتى الأرضية (floor_clad_area_m2،
+      يملؤه المحرك من بنود التكسية النازلة). المطبخ المُبلَّط بشريط ظهر فوق سطح العمل
+      (TIL-CER-SPLSH) جدرانه لا تصل الأرضية، فوزرته مطلوبة كاملة ولا تُصفَّر بحجة أنه
+      «فراغ رطب» — تصفيرها إسقاط بند منفَّذ من الجدول يدفعه المقاول من جيبه.
+      العتبة ليست جزءاً من الوزرة وتُقاس عدداً ببند مستقل — احتسابها هنا
+      ازدواج مباشر. مرتدات جوانب الباب (الكشفات): العرف الشامي الغالب ألا تُضاف؛ بعض
+      المكاتب تضيف 0.10 م لكل جنب — jamb_returns_m افتراضي 0.0 وقابل للضبط. أما مرتدات
+      الأعمدة والبروزات فتُضاف فعلاً (column_returns_m = 2 × عمق البروز لكل عمود).
+    waste_rationale: >-
+      10% on the running metre: strips crack during cutting (a 7 cm strip off a 60 cm
+      tile is fragile), every internal and external corner is a mitre with a failure
+      rate, and the last piece of each wall is a short offcut usually discarded. This
+      10% is on LENGTH; the tile consumption is a separate conversion via
+      strips_per_tile - do not apply the floor tile's 10% a second time on top. Factory
+      pre-made skirting drops to 0.05-0.07.
+    notes_ar: >-
+      الوحدة المعتمدة في بلاد الشام: المتر الطولي. بعض المكاتب في الأردن والخليج تقيسها
+      بالمتر المربع (الطول × الارتفاع) — يجب أن يكون خياراً مع بيان الارتفاع. الارتفاع
+      الشائع 7 سم أو 10 سم ويجب النص عليه لأن الطول لا يعبّر عن كمية المادة. التحويل
+      للشراء: strips_per_tile = floor(tile_size_m / (skirt_height_m + blade_kerf_m))، و
+      tiles_no = ceil(الكمية / (strips_per_tile × tile_size_m)). في سوريا ولبنان «نعلة»
+      وفي الأردن وفلسطين «وزرة». يجب أن يُظهر البيان الحسابي: المحيط، ثم خصم كل باب بعرضه،
+      ثم أطوال الخزائن والجدران المكسّاة، ثم الصافي، ثم الهدر، ثم عدد البلاطات اللازمة.
+
+  porcelain_skirting:
+    code: TIL-POR-SKT
+    name_ar: "توريد وتركيب وزرة (نعلة) بورسلان مقصوصة من بلاط الأرضية"
+    surface: skirting
+    unit: m
+    labor_included: true
+    formula: >-
+      wet_room_factor * (perimeter_m - skirting_door_deduct - full_height_window_run
+      - fitted_units_len_m - wall_tiled_len_m
+      + reveals_on * (door_jamb_returns + column_returns_m))
+    deduct_openings: false
+    deduct_threshold_m2: 0.0
+    add_reveals: true
+    waste_pct: 0.12
+    spec_params:
+      skirt_height_m: 0.08
+      tile_size_m: 0.60
+      edge_polish: true
+      blade_kerf_m: 0.004
+      jamb_returns_m: 0.0
+      count_door_returns: false
+      door_return_m: 0.05
+      fitted_units_len_m: 0.0
+      wall_tiled_len_m: 0.0
+      column_returns_m: 0.0
+      window_to_floor: false
+      skirting_deduct_doors: true
+      skip_wet_rooms: true
+      floor_clad_area_m2: 0.0
+    deduction_rule_ar: >-
+      مطابقة لوزرة السيراميك: خصم كامل عرض كل باب وقنطرة بلا حد أدنى، لا خصم للشبابيك إلا
+      النازلة للأرضية، لا وزرة خلف الخزائن الثابتة ولا على الجدران المكسّاة حتى الأرضية،
+      والعتبات بند مستقل. إضافة إجبارية: مرتدات الأعمدة والبروزات. مرتدات جوانب الأبواب لا
+      تُضاف افتراضياً (عُرف قابل للضبط).
+    waste_rationale: >-
+      12% - two points above ceramic. Rectified porcelain skirting must have its top
+      edge ground/polished after ripping, and a chipped top arris makes the strip scrap;
+      the harder body means more strips crack under the blade at the start and end of
+      the cut. Mitred external corners on porcelain fail more often than on ceramic.
+      Factory pre-made 8 cm skirting with a rounded edge drops to 0.08.
+    notes_ar: >-
+      إذا كانت الوزرة مقصوصة من نفس بلاط الأرضية يجب النص على «شامل حف وتلميع الحرف
+      العلوي» وإلا نشأ خلاف على الشكل النهائي. الوحدة م.ط في الشام.
+
+  marble_skirting:
+    code: STN-MRB-SKT
+    name_ar: "توريد وتركيب وزرة (نعلة) رخام/حجر ارتفاع 7–10 سم"
+    aliases: [STN-SKR-INT]
+    surface: skirting
+    unit: m
+    labor_included: true
+    formula: >-
+      wet_room_factor * (perimeter_m - skirting_door_deduct - full_height_window_run
+      - fitted_units_len_m - wall_tiled_len_m
+      + reveals_on * (door_jamb_returns + column_returns_m))
+    deduct_openings: false
+    deduct_threshold_m2: 0.0
+    add_reveals: true
+    waste_pct: 0.12
+    spec_params:
+      marble_type: null
+      stone_type: null
+      skirt_height_m: 0.07
+      thickness_cm: 2
+      edge_profile: straight_polished
+      polish: true
+      jamb_returns_m: 0.0
+      count_door_returns: false
+      door_return_m: 0.05
+      fitted_units_len_m: 0.0
+      wall_tiled_len_m: 0.0
+      column_returns_m: 0.0
+      mitre_corner_count: 0
+      window_to_floor: false
+      skirting_deduct_doors: true
+      skip_wet_rooms: false
+      floor_clad_area_m2: 0.0
+    deduction_rule_ar: >-
+      خصم كامل عرض فتحات الأبواب والقناطر بلا حد أدنى (بند طولي). لا خصم للشبابيك ولا
+      للكوّات المرتفعة عن الأرضية إلا النازلة حتى الأرضية. لا تُقاس خلف الخزائن الثابتة،
+      وتُطرح أطوال الجدران المكسوّة بالحجر أو الخشب إلى ارتفاع يتجاوز الوزرة
+      (wall_tiled_len_m) لأن التكسية تحل محلها — إغفال هذا الطرح ازدواج قياس مباشر. عند
+      التقاء الوزرة بالعتبة الرخامية تُخصم مرة واحدة ولا تُقاس القطعة في البندين: العتبة
+      بند أرضيات مستقل بالعدد أو م.ط ولا تدخل في طول الوزرة إطلاقاً. تُضاف مرتدات الأعمدة
+      والبروزات. مرتدات جوانب الأبواب: افتراضي لا تُضاف — في أعمال الرخام الفاخرة تُلبَّس
+      جوانب الباب وتُفرد ببند كسوة كشفة مستقل. بعض مكاتب دمشق لا تخصم أبواباً أضيق من 0.90
+      م وتعتبرها ضمن التسامح؛ الافتراضي هنا الخصم الكامل عبر skirting_deduct_doors.
+    waste_rationale: >-
+      12% on length. Strips are ripped from slabs, so slab ends and veined/cracked zones
+      are rejected, the polished exposed edge must be re-polished after every cut, and
+      thin 2 cm marble strips snap during transport and mitring. Below the 15% of floor
+      marble because strips nest along the slab, but never below 10% in practice; 10%
+      is defensible for uniform commercial stone cut from cladding off-cuts.
+    notes_ar: >-
+      الوحدة م.ط في الشام والارتفاع يُنص عليه في المواصفة (7 سم شائع مع الرخام، 10 سم مع
+      الحجر). يجب النص على تجهيز الحرف (مشطوف/مدوّر/مستقيم مجلي) لأنه عمالة إضافية. عند
+      الجلي على الموقع تُجلى الوزرة مع الأرضية ولا تُقاس مرتين. في الأردن وفلسطين «نعلة
+      رخام» وفي سوريا ولبنان «وزرة رخام». للشراء بالمتر المربع من السلاب: الكمية ×
+      skirt_height_m.
+
+  mdf_pvc_skirting:
+    code: PRQ-MDF-SKT
+    name_ar: "توريد وتركيب وزرة MDF/PVC للباركيه"
+    surface: skirting
+    unit: m
+    labor_included: true
+    formula: >-
+      wet_room_factor * (perimeter_m - skirting_door_deduct - full_height_window_run
+      - fitted_units_len_m - wall_tiled_len_m
+      + reveals_on * (door_jamb_returns + column_returns_m))
+    deduct_openings: false
+    deduct_threshold_m2: 0.0
+    add_reveals: true
+    waste_pct: 0.08
+    spec_params:
+      material: mdf
+      skirt_height_m: 0.10
+      profile: square
+      finish: painted
+      stick_length_m: 2.40
+      fixing_method: adhesive
+      jamb_returns_m: 0.0
+      count_door_returns: false
+      door_return_m: 0.05
+      fitted_units_len_m: 0.0
+      wall_tiled_len_m: 0.0
+      column_returns_m: 0.0
+      window_to_floor: false
+      skirting_deduct_doors: true
+      skip_wet_rooms: true
+      floor_clad_area_m2: 0.0
+    deduction_rule_ar: >-
+      خصم كامل عرض كل باب وقنطرة (بلا حد أدنى — بند طولي). لا خصم للشبابيك إلا النازلة
+      للأرضية. لا تُقاس خلف الخزائن الثابتة. لا خصم لفجوة التمدد لأن الوزرة هي التي
+      تغطيها. عند وجود قوائم أبواب خشبية (حلق) تُنهى الوزرة عند القائم — وهو الخصم نفسه
+      بعرض الفتحة زائد سماكة القائمين إن نُصّ عليه.
+    waste_rationale: >-
+      8%. Cutting loss is small (MDF cuts clean) but the material is sold in fixed
+      2.40 m or 2.90 m sticks, so every wall shorter than a stick leaves a stub, and
+      mitred corners are re-cut when the wall is out of square. Painted MDF also suffers
+      edge damage in handling. Model the stick rounding explicitly for procurement:
+      sticks_no = ceil(qty / stick_length_m).
+    notes_ar: >-
+      الوحدة م.ط. يجب النص على الارتفاع (8–12 سم شائع مع الباركيه) وعلى طريقة التثبيت
+      (لاصق/مسامير مخفية/كلبسات) وعلى دهان الوجه إن كان MDF خام. الزوايا الداخلية تُنفَّذ
+      بقص كوبينغ لا مِيتر في الأعمال الجيدة — عمالة أعلى ولا تغيّر الكمية. لا تُقاس في
+      الحمامات والمطابخ الرطبة (تنتفخ) ويجب أن ينبّه المحرك عند إسنادها لفراغ bath.
+
+  wood_skirting:
+    code: WOD-SKR-INT
+    name_ar: "وزرة خشبية (نعلة خشب / سكيرتنج) بارتفاع 8–12 سم"
+    surface: skirting
+    unit: m
+    labor_included: true
+    formula: >-
+      wet_room_factor * (perimeter_m - skirting_door_deduct - full_height_window_run
+      - fitted_units_len_m - wall_tiled_len_m
+      + reveals_on * (door_jamb_returns + column_returns_m))
+    deduct_openings: false
+    deduct_threshold_m2: 0.0
+    add_reveals: true
+    waste_pct: 0.12
+    spec_params:
+      skirting_height_cm: 10
+      wood_type: veneer_mdf
+      thickness_mm: 16
+      finish_coating: lacquer
+      stick_length_m: 2.40
+      jamb_returns_m: 0.0
+      count_door_returns: false
+      door_return_m: 0.05
+      fitted_units_len_m: 0.0
+      wall_tiled_len_m: 0.0
+      column_returns_m: 0.0
+      mitre_corner_count: 0
+      window_to_floor: false
+      skirting_deduct_doors: true
+      skip_wet_rooms: true
+      floor_clad_area_m2: 0.0
+    deduction_rule_ar: >-
+      يُخصم عرض فتحة الباب أو القوس بالكامل من محيط الغرفة لأن الوزرة تنقطع عند الفتحة. لا
+      يُخصم الشباك ولا الكوة المرتفعة عن الأرضية لأن الوزرة تمر تحتها. العتبة لا تُقاس ضمن
+      الوزرة إطلاقاً — بند أرضيات مستقل، والخلط بينهما ازدواج شائع. المرتد الجانبي داخل
+      حشوة الباب لا يُقاس إلا بنص العقد وعندها يدخل في بند الكشفة. الجدران المكسوّة بالخشب
+      إلى ارتفاع أعلى من الوزرة تُطرح عبر wall_tiled_len_m.
+    waste_rationale: >-
+      12% for painted MDF-core skirting; 15% for natural veneer needing tone matching.
+      Supplied in fixed 2.40-3.00 m lengths; every internal and external corner is
+      mitred and both mitres consume length, and short runs between doors leave
+      unusable stubs.
+    notes_ar: >-
+      تُقاس بالمتر الطولي على محيط الغرفة مطروحاً منه عروض فتحات الأبواب. الارتفاع القياسي
+      8 أو 10 أو 12 سم ويجب ذكره في الوصف. السعر شامل التثبيت والغراء والمسامير المخفية
+      والمعجون والدهان أو اللاكيه إن نُص عليه.
+
+  stone_skirting:
+    code: STN-SKR-INT
+    name_ar: "وزرة حجرية/رخامية — مدمجة في marble_skirting"
+    surface: skirting
+    unit: m
+    labor_included: true
+    merged_into: marble_skirting
+    formula: "0"
+    deduct_openings: false
+    deduct_threshold_m2: 0.0
+    add_reveals: false
+    waste_pct: 0.0
+    spec_params: {}
+    deduction_rule_ar: >-
+      هذا البند مطابق لـ marble_skirting (STN-MRB-SKT) وقد دُمج فيه منعاً للازدواج في جدول
+      الكميات. استعمل marble_skirting واضبط stone_type و skirt_height_m و waste_pct
+      (0.10 للحجر الموحّد اللون، 0.12 للرخام ذي العروق).
+    waste_rationale: >-
+      Merged duplicate. Kept as a stub so the historical code STN-SKR-INT still resolves
+      to a rule and never silently produces a second, double-counted skirting line.
+    notes_ar: >-
+      بند مدمج — لا يُنتج كمية. أي إسناد إليه يجب أن يُحوَّل إلى marble_skirting.
+
+  # ============================ درج وعتبات ================================= #
+
+  marble_stair_tread_riser:
+    code: STN-MRB-STR
+    name_ar: "توريد وتركيب قلبات ونوايم درج رخام (شامل القائم والنائم والأنف)"
+    surface: floor
+    unit: m
+    labor_included: true
+    formula: "stair_qty"
+    mode_param: measure_mode
+    unit_by_mode:
+      linear: m
+      developed_area: m2
+      count: "no"
+    deduct_openings: false
+    deduct_threshold_m2: 0.0
+    add_reveals: false
+    waste_pct: 0.20
+    spec_params:
+      marble_type: null
+      steps_count: 0
+      step_width_m: 1.20
+      tread_depth_m: 0.30
+      riser_height_m: 0.17
+      nosing_m: 0.03
+      tread_thickness_cm: 3
+      riser_thickness_cm: 2
+      antislip_grooves: true
+      measure_mode: linear
+    deduction_rule_ar: >-
+      لا يوجد خصم فتحات في هذا البند. الخصومات الحقيقية: (1) عرض الدرجة يُقاس صافياً بين
+      وجهي الجدارين المكسوّين أو حتى وجه الدرابزين حسب التفصيلة — يجب تثبيت المرجع في
+      المواصفة لأنه نزاع متكرر؛ (2) البسطات لا تُقاس هنا بل مع الأرضيات م٢ منعاً للازدواج؛
+      (3) الوزرة المائلة على جانب الدرج بند مستقل م.ط (STN-MRB-RAK)؛ (4) الدرجة السفلى
+      الدائرية أو ذات الأنف الملتف تُفرد عدداً بسعر خاص وتُخصم من عدد الدرجات العادية.
+    waste_rationale: >-
+      20%. Every tread and riser is a bespoke piece cut to an exact width from a slab,
+      so nesting is poor and the slab remainder is scrap; the nosing profile is machined
+      and a chipped nose scraps the whole tread; anti-slip grooves add another rejection
+      cause; and long thin risers break in transport more than any other stone piece.
+      15% is the floor of the realistic band, 25% for curved or oversized flights.
+    notes_ar: >-
+      العرف الغالب في الأردن وسوريا ولبنان وفلسطين: قياس الدرج بالمتر الطولي شاملاً القائم
+      والنائم والأنف وتجهيز الحرف — أي أن سعر المتر الطولي يقابل درجة واحدة بعرض متر.
+      مكاتب أخرى تقيس بالمسطح المنشور م٢ = العدد × العرض × (النائم + القائم + الأنف)،
+      وثالثة بالعدد. measure_mode بارامتر إلزامي الظهور ويجب أن يُطبع في البيان الحسابي
+      صراحةً لأن الفرق بين الطريقتين قد يبلغ ضعفين في القيمة. سماكة النائم 3 سم والقائم
+      2 سم شائعة.
+
+  raking_stair_skirting:
+    code: STN-MRB-RAK
+    name_ar: "توريد وتركيب وزرة درج مائلة (نعلة درج) رخام"
+    surface: skirting
+    unit: m
+    labor_included: true
+    formula: "stair_rake_run"
+    deduct_openings: false
+    deduct_threshold_m2: 0.0
+    add_reveals: false
+    waste_pct: 0.20
+    spec_params:
+      marble_type: null
+      skirt_height_m: 0.10
+      steps_count: 0
+      tread_depth_m: 0.30
+      riser_height_m: 0.17
+      sides: 1
+      profile_type: raking
+      landing_skirt_m: 0.0
+    deduction_rule_ar: >-
+      لا خصم فتحات. تُقاس على الجوانب المكشوفة فقط: الجانب الملاصق للجدار يُقاس، والجانب
+      المفتوح ذو الدرابزين لا يُقاس إلا بنص (sides). وزرة البسطة تُقاس ضمن وزرة الأرضيات
+      العادية أو هنا عبر landing_skirt_m — أحدهما فقط. الطول يُقاس على الميل (الوتر) لا
+      على المسقط الأفقي — قياسه أفقياً يبخس المقاول نحو 13% وهو خطأ شائع.
+    waste_rationale: >-
+      20%. Either the skirting is a continuous raking strip whose two ends are cut to
+      compound angles and whose length is bespoke per flight, or it is a stepped
+      profile where every step is an individual mitred piece - both produce heavy
+      unusable offcuts and a high breakage rate on thin sloping strips.
+    notes_ar: >-
+      يجب أن تحدد المواصفة الشكل: وزرة مائلة مستمرة أم مدرّجة تتبع شكل الدرجات — العمالة
+      والكمية تختلفان (profile_type: raking أو stepped). الوحدة م.ط. يجب أن يظهر في البيان
+      الحسابي حساب الوتر لكل درجة صراحةً: الجذر التربيعي لمجموع مربعي النائم والقائم،
+      مضروباً بعدد الدرجات وعدد الجوانب.
+
+  marble_door_threshold:
+    code: STN-MRB-THR
+    name_ar: "توريد وتركيب عتبات رخام للأبواب"
+    surface: floor
+    unit: "no"
+    labor_included: true
+    formula: "threshold_count"
+    deduct_openings: false
+    deduct_threshold_m2: 0.0
+    add_reveals: false
+    waste_pct: 0.10
+    waste_on_count: false
+    spec_params:
+      marble_type: null
+      threshold_depth_m: 0.20
+      thickness_cm: 2
+      side_projection_m: 0.05
+      edge_profile: straight_polished
+      step_up_mm: 0
+      apply_to_kinds: [door]
+    deduction_rule_ar: >-
+      تُحسب عتبة واحدة لكل فتحة باب يتغيّر عندها نوع التشطيب أو منسوبه (غرفة/حمام،
+      غرفة/ممر، داخل/بلكونة) أو حيث نصّ التفصيل. لا تُحسب عتبة للقناطر المفتوحة بين فراغين
+      بنفس التشطيب إلا بنص صريح — يُضبط بـ apply_to_kinds. الشبابيك لا عتبات لها في هذا
+      البند. الأهم لمنع الازدواج: أي باب له عتبة يجب أن يُستثنى من إضافة شريط مرتد الباب
+      في بند الأرضية (tile_door_reveal=false لذلك الباب)، ويجب خصم عرضه من بند الوزرة في
+      الحالتين. عند تجاور فراغين مختلفي التشطيب تُحمَّل العتبة على فراغ واحد فقط (القاعدة
+      الافتراضية: الفراغ الأرطب — عادةً الحمام) حتى لا تُحسب مرتين في المشروع.
+    waste_rationale: >-
+      10% - but it applies to the marble AREA derived for procurement, never to the
+      counted number of thresholds: a BOQ that shows 11 thresholds for 10 doors is
+      wrong and will be rejected in the interim certificate (hence waste_on_count is
+      false). The 10% covers the slab remainder after ripping 20 cm strips, edge
+      polishing on three sides, and breakage of the long thin piece.
+    notes_ar: >-
+      الوحدة الأشيع: العدد. بعض المكاتب تقيسها م.ط وبعضها م٢ — يجب أن يكون خياراً مع طباعة
+      أبعاد كل عتبة في البيان الحسابي: طول القطعة = عرض الفتحة + 2 × side_projection_m،
+      ومساحة الرخام للشراء = مجموع الأطوال × threshold_depth_m × (1 + الهدر). العمق الشائع
+      15–25 سم والسماكة 2–3 سم. في الحمامات تُرفع 1–2 سم عن منسوب البلاط منعاً للتسرب.
+      عتبة باب البلكونة تُنفَّذ بعرض أكبر ومع قطرة (دريب) وتُفرد ببند مستقل.
+
+  # ============================== قصارة ==================================== #
+
+  plaster_internal_wall_cement:
+    code: PLS-INT-WALL
+    name_ar: "قصارة إسمنتية داخلية للجدران (طرطشة + بؤج ومرابيع + بطانة + وجه ناعم)"
+    surface: wall
+    unit: m2
+    labor_included: true
+    formula: >-
+      gross_wall_area - deductible_openings_area
+      + reveals_on * deductible_reveal_run * reveal_width_m + niche_area - tiled_wall_area
+    deduct_openings: true
+    deduct_threshold_m2: 0.50
+    add_reveals: true
+    waste_pct: 0.10
+    spec_params:
+      coats: 3
+      mortar_mix: "1:3"
+      total_thickness_mm: 20
+      finish_type: smooth
+      reveal_mode: area
+      reveal_width_m: 0.15
+      niche_depth_m: 0.12
+      exclude_tiled_area: true
+      tiled_wall_area_m2: 0.0
+      height_source: clear
+    deduction_rule_ar: >-
+      تُخصم كل فتحة مساحتها الصافية (العرض × الارتفاع) أكبر من حدّ الخصم، والافتراضي
+      الشامي 0.50 م٢ (مشتق من SMM/POMI). الفتحات ≤ 0.50 م٢ (منور صغير، فتحة تكييف، شباك
+      تهوية حمّام 0.40×0.40) لا تُخصم إطلاقاً — وهذا عُرف اصطلاحي وليس حقيقة هندسية، ويجب
+      أن يبقى بارامتراً قابلاً للتعديل. الأبواب والعقود تُخصم دائماً لأن مساحتها تتجاوز
+      الحدّ عملياً. الكوّات (niche) لا تُخصم بل تُضاف (وجه الخلفية + الجوانب الأربعة) لأنها
+      تجويف مقصور وليست فتحة. الكشفات/المرتدات تُضاف بعد الخصم وللفتحات المخصومة وحدها
+      (deductible_reveal_run): الفتحة التي بقيت مساحتها داخل المساحة المدفوعة لأنها دون
+      حدّ الخصم قد دُفع ثمن جدارها كاملاً، فإضافة كشفتها فوق ذلك مطالبة بنفس الفتحة مرتين
+      — الكشفة تتبع الخصم. الجدار المُبلَّط بالسيراميك
+      يُخصم كاملاً من هذا البند ويُنقل إلى PLS-BCK-TILE لمنع الازدواج. لا يُخصم ارتفاع
+      الوزرة ولا مساحة خزائن المطبخ من القصارة.
+    waste_rationale: >-
+      8-12% mortar loss: mortar falling off the hawk and trowel to the floor (the
+      largest share), actual thickness exceeding design (20 mm designed, 25 mm executed
+      to correct blockwork deviation), mortar setting in the pail, and loss at the dots
+      and ribs. Machine-sprayed plaster rises to 15% because of rebound. The percentage
+      applies to AREA; pricing converts it to m3 of mortar via the thickness.
+    notes_ar: >-
+      وحدة الحصر: م٢. الارتفاع المعتمد هو الارتفاع الصافي من الأرضية النهائية للسقف؛ بعض
+      المكاتب تحصر من منسوب البلاطة (تضيف ~5 سم) — يُضبط عبر height_source. الخلاف الأشهر
+      في الموقع: هل الكشفات مدفوعة؟ الافتراضي هنا reveal_mode=area أي تُضاف كمساحة داخل
+      نفس البند. في المناقصات الحكومية الأردنية والفلسطينية العرف الأشيع reveal_mode=linear
+      وبند مستقل (PLS-REV-JMB) — الوضعان متنافيان ويجب على المحرك منع احتسابهما معاً. عرف
+      مصري بديل: لا تُخصم الفتحات الأقل من 1.50 م٢ ولا تُحسب الكشفات (يُقاصّ أحدهما بالآخر)
+      — يُفعَّل بضبط deduct_threshold_m2=1.5 و reveal_mode=none. مثال بيان حسابي: «مساحة
+      الجدران = 14.40 × 2.80 = 40.32 م٢ | خصم باب 0.90×2.10 = 1.89 م٢ (> 0.50) | لا يُخصم
+      منور 0.60×0.60 = 0.36 م٢ | كشفات 5.10 × 0.15 = 0.77 م٢ | الصافي 39.20 م٢ | هدر 10%
+      ⇒ 43.12 م٢».
+
+  plaster_internal_ceiling:
+    code: PLS-INT-CEIL
+    name_ar: "قصارة إسمنتية للأسقف (باطن البلاطة والجسور الساقطة)"
+    surface: ceiling
+    unit: m2
+    labor_included: true
+    formula: >-
+      floor_area - false_ceiling_area + false_ceiling_band_area
+      + beam_side_area - ceiling_void_area
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: false
+    waste_pct: 0.12
+    spec_params:
+      coats: 3
+      mortar_mix: "1:3"
+      total_thickness_mm: 20
+      include_beam_sides: false
+      beam_drop_m: 0.0
+      beam_run_m: 0.0
+      false_ceiling_area_m2: 0.0
+      perimeter_band_m: 0.30
+      ceiling_openings_m2: []
+      ceiling_deduct_threshold_m2: 0.50
+    deduction_rule_ar: >-
+      لا يُخصم أي شيء لعلب الإنارة ومخارج الكهرباء وفتحات التكييف ومراوح الشفط — كلها أقل
+      من حدّ الخصم (عرف). تُخصم فتحات المناور وفراغات الدرج التي تزيد عن الحدّ. مساحة السقف
+      المستعار تُخصم بالكامل ويُبقى فقط شريط محيطي بعرض 0.30 م فوق حدّ الجبس — وهذا سبب
+      نزاع متكرر، والافتراضي هنا احتساب الشريط لا السقف كاملاً. الجسور الساقطة: يُضاف
+      وجهاها فقط (باطنها أصلاً ضمن مساحة المسقط).
+    waste_rationale: >-
+      Higher than walls (12%) because overhead plaster works against gravity: the share
+      falling to the floor is visibly larger, it needs a cement-richer spatterdash coat
+      for adhesion, and there is scaffold loss plus making good the slab soffit
+      honeycombing.
+    notes_ar: >-
+      الوحدة م٢. تُقاس على المسقط الأفقي لا على السطح المائل. إن كان السقف بيتونياً مصبوباً
+      بشدّة معدنية ونظيفاً، كثير من المكاتب اللبنانية والأردنية تستبدل القصارة بمعجونة
+      ودهان مباشر فيُلغى هذا البند ويُستبدل بـ PNT-PUT-INT. مثال: «مساحة السقف = 12.60 م٢
+      | وجها جسر ساقط 3.60 × 0.40 × 2 = 2.88 م٢ | الصافي 15.48 م٢ | هدر 12% ⇒ 17.34 م٢».
+
+  plaster_backing_behind_tile:
+    code: PLS-BCK-TILE
+    name_ar: "طرطشة وبطانة إسمنتية خلف السيراميك (طبقة أساس بدون وجه ناعم)"
+    surface: wall
+    unit: m2
+    labor_included: true
+    formula: "parent_net_qty"
+    follows_rule: true
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: false
+    waste_pct: 0.10
+    spec_params:
+      parent_net_qty: 0.0
+      mortar_mix: "1:3"
+      thickness_mm: 15
+      waterproof_additive: false
+      flatness_tolerance_mm: 3
+    deduction_rule_ar: >-
+      يتبع حرفياً قواعد خصم بند تبليط الجدران TIL-CER-WALL: نفس الفتحات المخصومة، نفس حدّ
+      الخصم، ونفس الكشفات المضافة — لأن الطبقة تحت البلاط تماماً، ولذلك تُستنسخ الكمية عبر
+      parent_net_qty. لا يجوز أن تظهر أي مساحة في هذا البند وفي بند القصارة النهائية
+      PLS-INT-WALL معاً؛ المحرك يطرح مساحة التبليط من PLS-INT-WALL عبر tiled_wall_area_m2.
+    waste_rationale: >-
+      10%: same causes as normal plaster (mortar fall, over-thickness) minus the final
+      smoothing loss, plus a compensating increase because flatness under tile is
+      critical (deviation > 3 mm is patched again).
+    notes_ar: >-
+      بند منفصل لأن سعره أقل من القصارة الكاملة (لا يوجد وجه ناعم) — الخلط بينهما أشهر خطأ
+      تسعير في حمامات ومطابخ الشام. في سوريا ولبنان «بطانة تحت القيشاني»، وفي الأردن
+      وفلسطين «طرطشة وقصارة خشنة». إن كان النظام لصق السيراميك على البلوك مباشرة يُلغى
+      البند ويُرفع سعر المادة اللاصقة.
+
+  plaster_external_render:
+    code: PLS-EXT-FAC
+    name_ar: "قصارة/بياض خارجي للواجهات (طرطشة إسمنتية + بطانة + وجه)"
+    surface: facade
+    unit: m2
+    labor_included: true
+    formula: >-
+      facade_gross_area + parapet_area - external_openings_deduct
+      + reveals_on * external_reveal_run * reveal_width_m - clad_area_m2
+    deduct_openings: true
+    deduct_threshold_m2: 1.00
+    add_reveals: true
+    waste_pct: 0.12
+    spec_params:
+      coats: 3
+      mortar_mix: "1:3"
+      total_thickness_mm: 25
+      finish_texture: smooth
+      reveal_width_m: 0.25
+      slab_thickness_m: 0.30
+      parapet_height_m: 0.0
+      parapet_faces: 2
+      clad_area_m2: 0.0
+    deduction_rule_ar: >-
+      حدّ الخصم الخارجي الافتراضي 1.00 م٢ (أعلى من الداخلي 0.50 لأن الفتحات الخارجية أكبر
+      ولأن العرف في الواجهات يتساهل) — عرف اصطلاحي قابل للتعديل. لا تُخصم فتحات التهوية
+      وأنابيب التكييف والمزاريب. تُضاف كشفات الشبابيك الخارجية (جانبان + عتب + جلسة) دائماً
+      لأنها عمل حقيقي على السقالة. تُضاف أوجه الدروة من الجهتين. لا تُخصم البروزات
+      والكرانيش بل تُقاس مساحتها المنشورة إضافة. المساحات المكسوّة بحجر أو ألوكوبوند تُخصم
+      بالكامل عبر clad_area_m2.
+    waste_rationale: >-
+      12%: rough external surface needing greater thickness (25-30 mm) to correct
+      blockwork deviation over height, wind loss during spatterdash, mortar falling from
+      the scaffold that cannot be recovered, and curing water washing part of the fresh
+      face.
+    notes_ar: >-
+      الارتفاع الخارجي يُقاس من ظهر البلاطة السفلية لظهر البلاطة العلوية (يشمل سماكة
+      البلاطة والجسر المحيطي) وليس الارتفاع الصافي الداخلي — فرق ~0.30 م لكل طابق يشكّل
+      10% من الكمية، وهو من أكثر بنود النزاع. مثال: «واجهة 8.00 × (2.80 + 0.30) = 24.80
+      م٢ | دروة 1.00 × 8.00 × وجهين = 16.00 م٢ | خصم شباك 2.40×1.60 = 3.84 م٢ (> 1.00) |
+      كشفات 8.00 × 0.25 = 2.00 م٢ | الصافي 38.96 م٢ | هدر 12% ⇒ 43.64 م٢».
+
+  plaster_reveals_jambs:
+    code: PLS-REV-JMB
+    name_ar: "قصارة الكشفات والمرتدات حول الفتحات (جوانب + عتب + جلسة)"
+    surface: wall
+    unit: m
+    labor_included: true
+    formula: "deductible_reveal_run_with_sill"
+    deduct_openings: true
+    deduct_threshold_m2: 0.50
+    add_reveals: true
+    waste_pct: 0.12
+    unit_switch:
+      param: reveal_width_m
+      above: 0.30
+      unit: m2
+      multiply_by: reveal_width_m
+    spec_params:
+      reveal_width_m: 0.15
+      include_sill: true
+      arris_type: metal_bead
+      reveal_mode_guard: linear
+    deduction_rule_ar: >-
+      لا خصم مساحي — هذا بند إضافة. الباب: جانبان + عتب فقط، بلا جلسة سفلية. الشباك:
+      جانبان + عتب + جلسة. العقد: جانبان + عتب. الكوّة: محيطها الداخلي كاملاً وبلا شرط
+      لأنها إضافة أصلاً ولا تُخصم أبداً. أما الفتحات فتُقاس كشفاتها للفتحات التي خُصمت
+      فعلاً من بند الجدار وحدها (deductible_reveal_run_with_sill، وحدّ الخصم هنا هو حدّ
+      بند القصارة الداخلية 0.50 م٢ لأن الكشفة تتبع الخصم): شباك تهوية 0.40×0.40 لم يُخصم
+      من PLS-INT-WALL يعني أن جداره مدفوع كاملاً، فقياس كشفته هنا مطالبة ثانية بنفس
+      الفتحة — وهذه هي القاعدة نفسها التي تطبّقها GYP-REV-JMB و STN-REV-JMB و
+      WOD-REV-JMB. تُقاس الكشفة على
+      الوجه الواحد؛ إن كان الجدار خارجياً فللكشفة وجه داخلي (هذا البند) ووجه خارجي (ضمن
+      PLS-EXT-FAC). القاعدة الاصطلاحية: كشفة عرضها ≤ 0.30 م تُقاس بالمتر الطولي وما زاد
+      يُقاس بالمتر المربع — وهذا ما ينفّذه unit_switch آلياً.
+    waste_rationale: >-
+      12%: reveals are narrow hand work with sharp angles, the share of mortar falling
+      is high relative to their area, and they need a straightedge, a metal angle and
+      precise plumbing; waste relative to a small quantity rises.
+    notes_ar: >-
+      الوحدة م.ط. تحذير برمجي إلزامي: هذا البند بديل عن إضافة الكشفات داخل PLS-INT-WALL
+      وليس إضافة له — يجب على المحرك رفع خطأ تحقق إذا كان reveal_mode=area وظهر هذا البند
+      معاً، وإلا حصلت مطالبة مزدوجة. في المناقصات الحكومية الأردنية والفلسطينية بند الكشفات
+      مستقل بالمتر الطولي وهو الأشيع؛ وفي العقود الخاصة السورية واللبنانية يُدرج ضمن سعر
+      م٢ القصارة. الافتراضي الموصى به: 0.15 م للجدران الداخلية و 0.25 م للخارجية.
+
+  corner_bead_metal:
+    code: ACC-COR-BEAD
+    name_ar: "زوايا معدنية مجلفنة لحماية أحرف القصارة (كورنر بيد)"
+    surface: wall
+    unit: m
+    labor_included: true
+    formula: >-
+      external_corners_count * height_m
+      + reveals_on * include_opening_arrises * banded_arris_run
+    deduct_openings: false
+    deduct_threshold_m2: 0.0
+    add_reveals: true
+    waste_pct: 0.07
+    spec_params:
+      profile_type: angle_bead
+      material: galvanized_steel
+      width_mm: 25
+      external_corners_count: 0
+      include_opening_arrises: true
+      stick_length_m: 2.50
+    deduction_rule_ar: >-
+      لا خصم. تُقاس على كل حرف خارجي بارز (أعمدة، أكتاف، بروزات) بارتفاع الغرفة الكامل،
+      وعلى أحرف الفتحات (جانبان + عتب لكل فتحة؛ الجلسة لا تُزوّد بزاوية عادةً إلا في
+      الشبابيك الخارجية). الغرفة المستطيلة النظيفة external_corners_count = 0.
+    waste_rationale: >-
+      7%: beads come in fixed 2.50/3.00 m lengths and cutting to head and jamb leaves
+      short unusable remainders, plus a few beads bent and damaged during fixing.
+    notes_ar: >-
+      الوحدة م.ط. غالباً مدرج ضمن سعر القصارة في العقود الخاصة («شامل الزوايا المجلفنة») —
+      يُفعَّل كبند مستقل فقط في المواصفات التي تنص عليه. في الشام يُسمّى «زاوية قصارة» أو
+      «كورنر».
+
+  gypsum_skim_coat:
+    code: PLS-GYP-SKIM
+    name_ar: "تلبيسة جبس ناعم (قصارة جبسية / جبصين) على الجدران والأسقف"
+    surface: wall
+    unit: m2
+    labor_included: true
+    formula: "parent_net_qty + apply_to_ceiling * parent_ceiling_net_qty"
+    follows_rule: true
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: false
+    waste_pct: 0.08
+    spec_params:
+      parent_net_qty: 0.0
+      parent_ceiling_net_qty: 0.0
+      thickness_mm: 3
+      gypsum_type: fine
+      over_substrate: cement_plaster
+      apply_to_ceiling: false
+    deduction_rule_ar: >-
+      قواعد الخصم مطابقة تماماً لقصارة الجدران: خصم الفتحات > 0.50 م٢ (عرف)، إضافة
+      الكشفات، عدم خصم الكوّات، واستثناء المساحات المبلَّطة — ولذلك تُستنسخ الكمية من
+      PLS-INT-WALL عبر parent_net_qty بدل إعادة قياسها. لا تُطبَّق التلبيسة الجبسية في
+      الحمامات والمطابخ الرطبة (تنهار مع الرطوبة) — على المحرك أن يرفع تحذيراً إذا أُسندت
+      لفراغ bath أو kitchen.
+    waste_rationale: >-
+      8%: gypsum sets fast - any batch not used within 20-30 minutes is thrown away
+      (the largest single waste), plus sanding loss that literally turns to dust.
+    notes_ar: >-
+      في سوريا ولبنان «جبصين» وتُستعمل كوجه نهائي بديل عن الوجه الإسمنتي الناعم؛ في الأردن
+      وفلسطين شائع «قصارة إسمنتية + معجونة» بدلاً منها. إن نُفِّذت التلبيسة الجبسية فغالباً
+      يُلغى بند المعجونة PNT-PUT-INT — يجب منع الازدواج.
+
+  # ============================== دهانات ================================== #
+
+  putty_filler_internal:
+    code: PNT-PUT-INT
+    name_ar: "معجونة وصنفرة للجدران والأسقف تحضيراً للدهان"
+    surface: wall
+    unit: m2
+    labor_included: true
+    formula: "parent_net_qty"
+    follows_rule: true
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: false
+    waste_pct: 0.07
+    spec_params:
+      parent_net_qty: 0.0
+      coats: 2
+      putty_type: acrylic
+      sanding_grade: 120
+      separate_item: false
+    deduction_rule_ar: >-
+      مطابق لقواعد بند الدهان الذي يسبقه (نفس حدّ الخصم ونفس معالجة الكشفات) — لا يجوز أن
+      تختلف مساحة المعجونة عن مساحة الدهان في نفس الفراغ إطلاقاً؛ اختلافهما مؤشر خطأ في
+      المحرك.
+    waste_rationale: >-
+      7%: sanding loss (a substantial part of the putty is designed to be removed as
+      dust) plus material drying on the knife and in the pail.
+    notes_ar: >-
+      الافتراضي في السوق الشامي: المعجونة مدرجة ضمن سعر بند الدهان («سيلر + معجونة وجهين +
+      دهان وجهين») ولا تظهر كبند مستقل؛ يُفعَّل separate_item=true فقط للمواصفات التفصيلية
+      أو عند تسعير المصنعية منفصلة.
+
+  paint_emulsion_internal_wall:
+    code: PNT-EMU-WALL
+    name_ar: "دهان إيمولسيون (بلاستيك مائي) داخلي للجدران — سيلر + وجهان"
+    surface: wall
+    unit: m2
+    labor_included: true
+    formula: >-
+      gross_wall_area - deductible_openings_area
+      + reveals_on * deductible_reveal_run * reveal_width_m
+      - tiled_wall_area - skirting_band_area
+    deduct_openings: true
+    deduct_threshold_m2: 0.50
+    add_reveals: false
+    waste_pct: 0.05
+    spec_params:
+      coats: 2
+      sealer_coats: 1
+      product_grade: standard
+      color_count: 1
+      reveal_width_m: 0.15
+      deduct_skirting_band: false
+      skirting_band_m: 0.10
+      exclude_tiled_area: true
+      tiled_wall_area_m2: 0.0
+      paint_above_tile_only: false
+    deduction_rule_ar: >-
+      نفس حدّ خصم القصارة 0.50 م٢ (عرف قابل للتعديل): فتحة أصغر لا تُخصم. الفرق الجوهري عن
+      القصارة: الكشفات والمرتدات لا تُضاف افتراضياً في الدهان (تُعتبر داخلة ضمن السعر —
+      add_reveals=false) وهذا هو العرف الأشيع في العقود الخاصة الشامية، بينما تنص بعض
+      المواصفات على «تُقاس أعمال الدهان بنفس طريقة قياس القصارة» فتُضاف الكشفات — لذلك
+      البارامتر إلزامي الظهور للمستخدم. لا يُخصم ارتفاع الوزرة افتراضياً رغم أن الدهان لا
+      يصل خلفها (deduct_skirting_band=false، عرف تساهلي شائع). تُخصم كامل المساحة المبلَّطة
+      بالسيراميك. الكوّات لا تُخصم وتُدهن من الداخل. لا يُخصم شيء لعلب الكهرباء والمفاتيح.
+    waste_rationale: >-
+      5% by roller/brush: residue that cannot be got out of the tin and tray, paint
+      drying on roller and brush, and touching-up after other trades. Raise to 15-20%
+      for airless spray (overspray) and to 8% when several colours are used in one
+      space (a part-tin loss per colour).
+    notes_ar: >-
+      حصر الدهان يُبنى على مساحة القصارة الصافية ذاتها؛ إن اختلفا في المخرجات فهناك خطأ —
+      يُنصح أن يطبع المحرك سطر «مساحة الدهان = مساحة القصارة الصافية». في الحمامات
+      والمطابخ المبلَّطة حتى 2.10 م والسقف 2.80 م: مساحة الدهان = المحيط × 0.70 م مع خصم
+      ما يقع فوق خط البلاط من الفتحات فقط. عدد الأوجه عرف تسعيري لا حصري (يؤثر على الكمية
+      باللتر لا بالمتر المربع).
+
+  paint_emulsion_ceiling:
+    code: PNT-EMU-CEIL
+    name_ar: "دهان إيمولسيون للأسقف (أبيض مطفي) — سيلر + وجهان"
+    surface: ceiling
+    unit: m2
+    labor_included: true
+    formula: "parent_net_qty + include_cornice * perimeter_m * cornice_girth_m"
+    follows_rule: true
+    deduct_openings: false
+    deduct_threshold_m2: 0.50
+    add_reveals: false
+    waste_pct: 0.06
+    spec_params:
+      parent_net_qty: 0.0
+      coats: 2
+      sealer_coats: 1
+      product_grade: standard
+      anti_mould: false
+      include_beam_sides: true
+      include_cornice: false
+      cornice_girth_m: 0.25
+    deduction_rule_ar: >-
+      لا خصم لعلب الإنارة والسبوتات وفتحات التكييف ومراوح الشفط (كلها < 0.50 م٢ — عرف).
+      تُخصم فتحات المناور وفراغ الدرج فوق حدّ الخصم — وكل ذلك محسوب سلفاً في صافي
+      PLS-INT-CEIL الذي يُستنسخ هنا. السقف المستعار يُدهن ضمن بند الجبس بورد أو ضمن هذا
+      البند حسب المواصفة — على المحرك منع احتساب دهان السقف الأصلي ودهان السقف المستعار
+      على نفس المسقط.
+    waste_rationale: >-
+      6%: slightly above walls because of splatter when painting upwards, extra loss on
+      the long-handled roller, and more making good after light fittings are installed.
+    notes_ar: >-
+      دهان أسقف الحمامات يُفضَّل بمواصفة مقاومة للعفن — تغيير مواصفة لا تغيير حصر. مثال:
+      «مساحة السقف 12.60 م٢ | أوجه جسر 2.88 م٢ | الصافي 15.48 م٢ | هدر 6% ⇒ 16.41 م٢».
+
+  paint_oil_enamel:
+    code: PNT-OIL-WALL
+    name_ar: "دهان زيتي/لميع (بوية زيت) للجدران والأشرطة"
+    surface: wall
+    unit: m2
+    labor_included: true
+    formula: "banded_gross_area - banded_openings_deduct"
+    band_height_param: band_height_m
+    full_height_param: full_wall
+    deduct_openings: true
+    deduct_threshold_m2: 0.50
+    add_reveals: false
+    waste_pct: 0.08
+    spec_params:
+      coats: 2
+      primer_type: oil_primer
+      sheen: gloss
+      band_height_m: 1.20
+      apply_mode: band
+      full_wall: false
+      sill_height_m: 0.90
+    deduction_rule_ar: >-
+      في وضع الشريط: يُخصم من الفتحة الجزء الواقع داخل ارتفاع الشريط فقط (وليس كامل
+      الفتحة) — الباب يُخصم بعرضه × ارتفاع الشريط، والشباك يُخصم فقط بالجزء المتقاطع مع
+      الشريط حسب منسوب الجلسة (sill_height_m). في وضع الجدار الكامل (full_wall=true)
+      تنطبق قواعد الإيمولسيون نفسها. الأبواب والشبابيك الخشبية/الحديدية نفسها لا تُقاس هنا:
+      تُقاس بالعدد أو بمساحة الضلفة × وجهين ضمن بند نجارة/حدادة منفصل — احتسابها هنا خطأ
+      شائع يضاعف الكمية.
+    waste_rationale: >-
+      8%: oil paint needs thinner for dilution and cleaning (a net loss), it dries fast
+      on brush and roller so more tools are consumed, the first coat is absorbed heavily
+      by the substrate, and the band edge needs masking tape and touch-up.
+    notes_ar: >-
+      في الشام «زيتي» أو «بوية زيت» أو «لميع»، ويُستعمل تاريخياً كشريط بارتفاع 1.20–1.50 م
+      في الممرات وبيوت الدرج والمطابخ الاقتصادية لسهولة التنظيف. مثال: «شريط زيتي = المحيط
+      10.20 × 1.20 = 12.24 م٢ | خصم جزء الباب داخل الشريط 0.90 × 1.20 = 1.08 م٢ | الصافي
+      11.16 م٢ | هدر 8% ⇒ 12.05 م٢».
+
+  paint_external_facade:
+    code: PNT-EXT-FAC
+    name_ar: "دهان خارجي للواجهات (أكريليك/ديكورا) — أساس خارجي + وجهان"
+    surface: facade
+    unit: m2
+    labor_included: true
+    formula: "parent_net_qty"
+    follows_rule: true
+    deduct_openings: false
+    deduct_threshold_m2: 1.00
+    add_reveals: false
+    waste_pct: 0.10
+    spec_params:
+      parent_net_qty: 0.0
+      coats: 2
+      primer_type: exterior_primer
+      product_grade: acrylic
+      application_method: roller
+      texture: smooth
+    deduction_rule_ar: >-
+      مطابق تماماً لقواعد القصارة الخارجية ويستنسخ صافيها: حدّ خصم 1.00 م٢ للفتحات
+      الخارجية (عرف)، إضافة الكشفات الخارجية، احتساب وجهي الدروة، وخصم المساحات المكسوّة
+      بالحجر أو الكلادينج. لا يُخصم شيء للمزاريب وأنابيب التكييف. الأسطح ذات الملمس الخشن
+      تُقاس بمساحتها المنشورة لا بالمساحة الحقيقية للسطح المموّج.
+    waste_rationale: >-
+      10% by roller on an external surface: higher absorption on rough external render,
+      wind loss on the scaffold, and making good after the scaffold is struck (tie
+      points get painted twice). 20% for spray, 15% for textured finishes.
+    notes_ar: >-
+      كمية الدهان الخارجي = كمية القصارة الخارجية بالضبط؛ اختلافهما مؤشر خطأ. يُنصح أن يظهر
+      في البيان الحسابي سطر: «مساحة الدهان الخارجي مأخوذة من بند القصارة الخارجية = X م٢».
+
+  # ============================ عزل مائي ================================== #
+
+  waterproof_wet_floor_cementitious:
+    code: WPR-CEM-FLR
+    name_ar: "عزل مائي أسمنتي مرن لأرضيات الحمامات والمطابخ مع رفعة على الجدران"
+    surface: floor
+    unit: m2
+    labor_included: true
+    formula: >-
+      floor_area + perimeter_m * upstand_height_m
+      + include_door_return * door_only_run * door_return_depth_m
+    deduct_openings: false
+    deduct_threshold_m2: 0.0
+    add_reveals: false
+    waste_pct: 0.10
+    spec_params:
+      system_type: flexible_cementitious
+      coats: 2
+      consumption_kg_m2: 2.2
+      upstand_height_m: 0.30
+      include_door_return: true
+      door_return_depth_m: 0.15
+      reinforcing_tape: true
+      flood_test: true
+    deduction_rule_ar: >-
+      لا يُخصم شيء إطلاقاً: لا مصارف أرضية، ولا اختراقات المواسير، ولا قاعدة المرحاض أو
+      الدش — بل هي مواضع تدعيم إضافية (شريط تقوية + طبقة ثالثة موضعية) وتُسعَّر ضمن السعر
+      أو ببند إضافي بالعدد. المحيط لا يُقصَّر عند فتحة الباب: الرفعة تستمر وتلتف داخل
+      الفتحة عند العتبة بمقدار 0.15 م (وهو موضع التسريب الأول في حمامات الشام). الرفعة
+      الافتراضية 0.30 م على كل المحيط عرف شائع؛ بعض المكاتب 0.20 م والمواصفات الأوروبية
+      0.15 م — بارامتر قابل للتعديل. منطقة الدش تُرفع إلى 1.80–2.00 م وتُحصر ببند منفصل
+      WPR-CEM-WALL لتجنّب الازدواج.
+    waste_rationale: >-
+      10%: flexible cementitious material is mixed in small batches and sets within
+      ~45 minutes so the remainder is discarded; actual consumption exceeds theoretical
+      because the concrete substrate is porous and absorbs the first coat; and thickness
+      increases at corners and around drains.
+    notes_ar: >-
+      الوحدة م٢ (الرفعة تُحوَّل لمساحة وتُدمج، وهو العرف الأشيع في الشام؛ بعض المكاتب
+      اللبنانية تحصرها م.ط ببند مستقل). الاستهلاك النظري 2.0–2.5 كغم/م٢ للطبقتين ويستعمله
+      التسعير لتحويل الكمية إلى كغم — لذلك تبقى الوحدة م٢. يُشترط اختبار التغريق 48 ساعة
+      قبل التبليط (بند تحقق لا بند كمية). مثال: «أرضية الحمام 4.20 م٢ | رفعة 8.40 × 0.30 =
+      2.52 م٢ | ارتداد عند العتبة 0.80 × 0.15 = 0.12 م٢ | الصافي 6.84 م٢ | هدر 10% ⇒
+      7.52 م٢».
+
+  waterproof_wet_wall_shower:
+    code: WPR-CEM-WALL
+    name_ar: "عزل مائي لجدران المنطقة الرطبة (خلف الدش/البانيو) حتى ارتفاع الرش"
+    surface: wall
+    unit: m2
+    labor_included: true
+    formula: >-
+      full_wet_room * (perimeter_m * wet_zone_height_m - banded_openings_deduct
+      - perimeter_m * upstand_height_m)
+      + (1 - full_wet_room) * wet_zone_run_m * (wet_zone_height_m - upstand_height_m)
+    band_height_param: wet_zone_height_m
+    deduct_openings: true
+    deduct_threshold_m2: 0.50
+    add_reveals: false
+    waste_pct: 0.12
+    spec_params:
+      wet_zone_run_m: 2.40
+      wet_zone_height_m: 2.00
+      full_wet_room: false
+      upstand_height_m: 0.30
+      coats: 2
+      reinforcing_tape: true
+      sill_height_m: 0.90
+    deduction_rule_ar: >-
+      يُطرح إجبارياً الجزء المحسوب سلفاً كرفعة في بند الأرضيات (المحيط × 0.30 م) وإلا وقع
+      ازدواج مباشر في الكمية. لا يُخصم شيء للبطارية أو مخارج المياه أو رف الصابون — بل
+      تُعالج كاختراقات وتُدعَّم. تُخصم فتحة الشباك الواقعة داخل النطاق الرطب بمساحتها
+      المتقاطعة مع الارتفاع الرطب فقط. لا تُقاس هذه الطبقة تحت السيراميك الجاف خارج نطاق
+      الرش إلا إذا نصّت المواصفة على حمّام رطب كامل (full_wet_room=true).
+    waste_rationale: >-
+      12%: higher than the floor because vertical application loses material by running
+      and dripping, needs multiple thinner coats, and the ratio of reinforcing tape at
+      corners and junctions is higher relative to a small area.
+    notes_ar: >-
+      الافتراضي الشامي الأشيع: عزل جدران كابينة الدش فقط بارتفاع 1.80–2.00 م لا الحمّام
+      كاملاً — رفع full_wet_room=true يزيد الكلفة كثيراً ويُستعمل للفنادق والحمامات ذات
+      الأرضية المستوية. يجب أن يظهر في البيان الحسابي سطر صريح: «مطروح منها الرفعة المحسوبة
+      في بند عزل الأرضيات = X م٢».
+
+  waterproof_balcony_membrane:
+    code: WPR-MEM-BAL
+    name_ar: "عزل مائي للشرفات والسطوح برولات بيتومينية (ممبرين) شامل التراكب والرفعات"
+    surface: floor
+    unit: m2
+    labor_included: true
+    formula: "(floor_area + perimeter_m * upstand_height_m) * layers"
+    deduct_openings: false
+    deduct_threshold_m2: 0.0
+    add_reveals: false
+    waste_pct: 0.15
+    spec_params:
+      membrane_type: app_bitumen
+      thickness_mm: 4
+      layers: 1
+      upstand_height_m: 0.25
+      primer_included: true
+      protection_layer: false
+    deduction_rule_ar: >-
+      لا خصم للمصارف والمزاريب (مواضع تقوية بقطع إضافية). المحيط يُؤخذ كاملاً بما فيه جهة
+      الدروة وجهة الباب — العزل يلتف عند عتبة باب الشرفة. عند وجود درابزين مثبت لاحقاً لا
+      يُخصم شيء لكن يُنبَّه أن التثبيت يخترق العزل. التراكب لا يُقاس كمساحة إضافية بل
+      يُغطّى بنسبة الهدر — احتسابه كمساحة إضافية وكهدر معاً ازدواج.
+    waste_rationale: >-
+      15%, the highest in the wet-works group, and the cause is geometric not
+      negligence: the mandatory 10 cm side and 15 cm end laps consume ~10% of every
+      roll, plus cutting at corners and upstands, the triangular kicker fillet at the
+      floor-wall junction, and short unusable roll ends (rolls are 10 m x 1 m).
+    notes_ar: >-
+      إن كانت المواصفة طبقتين متعامدتين (layers=2) تُضرب الكمية × 2 ويبقى الهدر 15% لكل
+      طبقة. طبقة الحماية بند منفصل يُقاس بمساحة الأرضية فقط بلا رفعات. في العقود اللبنانية
+      يُقاس أحياناً بالرول (عدد) — الافتراضي هنا م٢. مثال: «أرضية الشرفة 5.60 م٢ | رفعة
+      9.60 × 0.25 = 2.40 م٢ | الصافي 8.00 م٢ | هدر 15% ⇒ 9.20 م٢».
+
+  # ======================= تبليط جدران وملحقاته ============================ #
+
+  wall_tile_ceramic_wet:
+    code: TIL-CER-WALL
+    name_ar: "تبليط سيراميك/قيشاني للجدران في الحمامات والمطابخ (توريد وتركيب بلاصق وروبة)"
+    surface: wall
+    unit: m2
+    labor_included: true
+    formula: >-
+      banded_gross_area - banded_openings_deduct
+      + reveals_on * banded_reveal_run * reveal_width_m - bathtub_deduct
+    band_height_param: tiling_height_m
+    full_height_param: full_height
+    deduct_openings: true
+    deduct_threshold_m2: 0.50
+    add_reveals: true
+    waste_pct: 0.10
+    waste_modifiers:
+      laying_pattern:
+        diagonal: 0.08
+        patterned: 0.05
+        mosaic: 0.02
+      tile_size:
+        60x120: 0.03
+        80x80: 0.03
+    spec_params:
+      laying_pattern: straight
+      tile_size: 25x40
+      tile_type: ceramic
+      tiling_height_m: 2.10
+      full_height: true
+      sill_height_m: 0.90
+      layout_pattern: straight
+      adhesive_type: C1T
+      grout_width_mm: 2
+      reveal_width_m: 0.15
+      tile_behind_bathtub: true
+      bathtub_run_m: 0.0
+    deduction_rule_ar: >-
+      الخصم يقتصر على الجزء من الفتحة الواقع داخل النطاق المبلَّط فقط، لا مساحة الفتحة
+      كاملة — الباب: العرض × أقل من (ارتفاع الباب، ارتفاع التبليط)؛ الشباك: يُخصم فقط
+      التقاطع بين [منسوب الجلسة، الجلسة + ارتفاع الشباك] و[0، ارتفاع التبليط]. الفتحات ≤
+      0.50 م٢ (فتحة شفاط، منور تهوية 0.40×0.40) لا تُخصم — عرف قابل للتعديل. كشفات الشباك
+      والباب داخل النطاق المبلَّط تُبلَّط وتُضاف (جانبان + عتب، والشباك يضاف له الجلسة) —
+      إغفالها خطأ شائع. لا يُخصم شيء للأدوات الصحية: المرحاض والمغسلة والدش تُركَّب بعد
+      البلاط فالبلاط يمرّ خلفها. خلف البانيو المبني الافتراضي التبليط الكامل؛ إن نصّت
+      المواصفة على 0.50 م فوق الحافة فقط يُطرح الفرق عبر bathtub_run_m. المساحة الناتجة
+      هنا تُطرح إجبارياً من بندي القصارة النهائية والدهان لنفس الفراغ.
+    waste_rationale: >-
+      10% for small and medium sizes (20x30, 25x40, 30x60) laid straight: cutting at
+      corners, at the ceiling, around openings and pipe outlets leaves unusable offcuts,
+      plus breakage under the grinder and 2-3 spare tiles kept for maintenance. Raise to
+      12-15% for large formats (60x120, 80x80) because one broken tile is 0.72-1.00 m2
+      at once; 15% for patterned tile needing matching; 18-20% for 45 diagonal laying;
+      12% for mosaic.
+    notes_ar: >-
+      الافتراضي الشامي للحمامات: تبليط حتى السقف (full_height=true) وهو السائد للمواصفات
+      المتوسطة فما فوق؛ المواصفة الاقتصادية تُبلَّط حتى 2.10–2.20 م والباقي يُقصَّر ويُدهن.
+      المطبخ: العرف الأشيع تبليط ظهر المطبخ فقط (TIL-CER-SPLSH) لا الجدران كاملة. تحذير
+      برمجي: عندما يكون ارتفاع التبليط أقل من ارتفاع الفراغ يجب أن يُولّد المحرك تلقائياً
+      مساحة قصارة ودهان للشريط العلوي = المحيط × (الارتفاع − ارتفاع التبليط) مخصوماً منها
+      ما يقع فوق خط البلاط من الفتحات.
+
+  kitchen_backsplash_tile:
+    code: TIL-CER-SPLSH
+    name_ar: "سيراميك ظهر المطبخ (بين سطح العمل والخزائن العلوية)"
+    surface: wall
+    unit: m2
+    labor_included: true
+    formula: >-
+      counter_run_effective * backsplash_band_height
+      - window_behind_counter_run_m * backsplash_band_height
+      + reveals_on * (2 * backsplash_band_height * window_behind_counter_count
+      + 2 * window_behind_counter_run_m) * reveal_width_m
+    deduct_openings: true
+    deduct_threshold_m2: 0.50
+    add_reveals: true
+    waste_pct: 0.12
+    waste_modifiers:
+      laying_pattern:
+        mosaic: 0.03
+        offset_subway: 0.03
+        herringbone: 0.03
+    spec_params:
+      laying_pattern: straight
+      counter_run_m: 0.0
+      counter_height_m: 0.90
+      upper_cabinet_height_m: 1.50
+      min_band_m: 0.60
+      tile_size: 10x30
+      layout_pattern: brick
+      reveal_width_m: 0.15
+      window_behind_counter_run_m: 0.0
+      window_behind_counter_count: 0
+      counter_run_ratio: 0.45
+    deduction_rule_ar: >-
+      يُخصم عرض الشباك الواقع خلف سطح العمل بارتفاع الشريط فقط، وتُضاف كشفاته لأنها
+      تُبلَّط. لا يُخصم شيء لمخارج الكهرباء (الأفياش) ولا لخلف الشفاط. لا يُقاس التبليط خلف
+      الفرن والثلاجة إذا نصّت المواصفة على ذلك (نادر في الشام — الافتراضي التبليط المستمر
+      لأن الأجهزة تُستبدل). لا يُقاس تحت سطح العمل (المنطقة المخفية بخزائن القاعدة).
+    waste_rationale: >-
+      12%: a narrow 0.60 m band means nearly every row needs a rip cut, and the ratio of
+      offcuts to area is far higher than full-height tiling; add cutting around sockets,
+      the hood and gas outlets, plus decor matching. Mosaic or offset subway: 15%.
+    notes_ar: >-
+      ارتفاع الشريط = أكبر من (ارتفاع الخزائن العلوية − ارتفاع سطح العمل) و min_band_m.
+      بعض المكاتب تحصر ظهر المطبخ بالمتر الطولي بارتفاع ثابت 0.60 م — تحويل مباشر: الطول ×
+      0.60. تنبيه إلزامي: counter_run_m ليس ضمن العقد المثبَّت للبيانات، فإن لم يُدخله
+      المستخدم يُستعمل التقدير counter_run_ratio × المحيط (0.45) ويجب أن يظهر في البيان
+      الحسابي سطر تحذيري صريح: «تقدير: مسار سطح العمل = 45% من محيط المطبخ — يلزم تثبيته من
+      المخطط». لا يُحاسب شريط بارتفاع أقل من 0.60 م حتى لو نُفِّذ 0.55 م (عرف تسعيري).
+
+  tile_trim_profile:
+    code: TIL-TRM-PVC
+    name_ar: "زوايا وبروفيلات إنهاء للسيراميك (PVC/ألمنيوم/ستانلس) للأحرف والنهايات"
+    surface: wall
+    unit: m
+    labor_included: true
+    formula: >-
+      external_corners_count * band_height + top_edge_on * (perimeter_m - door_run)
+      + reveals_on * include_opening_edges * banded_arris_run
+    band_height_param: tiling_height_m
+    full_height_param: full_height
+    deduct_openings: true
+    deduct_threshold_m2: 0.50
+    add_reveals: true
+    waste_pct: 0.08
+    spec_params:
+      profile_material: pvc
+      profile_size_mm: 10
+      external_corners_count: 0
+      include_top_edge: false
+      include_opening_edges: true
+      tiling_height_m: 2.10
+      full_height: true
+      stick_length_m: 2.50
+    deduction_rule_ar: >-
+      لا خصم — بند إضافة. يُقاس على: كل حرف خارجي شاقولي بارتفاع التبليط، وحدّ التبليط
+      العلوي إذا لم يصل للسقف (مطروحاً منه عرض الأبواب والعقود) — ويُفعَّل ذلك تلقائياً
+      عندما يكون ارتفاع التبليط أقل من ارتفاع الفراغ، وأحرف الفتحات المبلَّطة (جانبان +
+      عتب). لا يُقاس عند التقاء البلاط بالأرضية ولا في الأركان الداخلية (تُعالج بالروبة أو
+      السيليكون).
+    waste_rationale: >-
+      8%: profiles come in fixed 2.50/2.70 m lengths, cutting to non-matching heights
+      leaves short remainders, and the 45 mitre where the vertical meets the horizontal
+      destroys pieces when mis-cut.
+    notes_ar: >-
+      الوحدة م.ط. غالباً مدرج ضمن سعر بند التبليط في العقود الخاصة («شامل زوايا الإنهاء
+      والروبة»)؛ يُفعَّل كبند مستقل في المواصفات التفصيلية أو مع بروفيلات ستانلس/ألمنيوم
+      غالية. البديل الشامي التقليدي: قصّ حرف البلاطتين بزاوية 45° (جوانية) بدل البروفيل —
+      يُسعَّر كمصنعية إضافية بالمتر الطولي بنفس هذه الكمية.
+
+  silicone_sealant_wet_joints:
+    code: SEL-SIL-WET
+    name_ar: "سيليكون مانع للعفن للفواصل الرطبة (التقاء الأرضية بالجدار والأركان والأدوات)"
+    surface: wall
+    unit: m
+    labor_included: true
+    formula: >-
+      include_floor_wall_joint * (perimeter_m - door_only_run)
+      + internal_corners * band_height + fixtures_allowance_m
+    band_height_param: tiling_height_m
+    full_height_param: full_height
+    deduct_openings: false
+    deduct_threshold_m2: 0.0
+    add_reveals: false
+    waste_pct: 0.10
+    spec_params:
+      sealant_type: anti_mould_silicone
+      joint_width_mm: 6
+      internal_corners_count: 0
+      fixtures_allowance_m: 6.0
+      include_floor_wall_joint: true
+      tiling_height_m: 2.10
+      full_height: true
+    deduction_rule_ar: >-
+      يُخصم عرض فتحة الباب من فاصل الأرضية-الجدار. لا يُخصم شيء آخر. الأركان الداخلية
+      الشاقولية تُقاس بارتفاع التبليط لا بارتفاع الغرفة. حول الأدوات الصحية يُعتمد بدل
+      مقطوع (fixtures_allowance_m افتراضي 6.0 م: مغسلة 2.0 + بانيو/دش 3.0 + مرحاض 1.0)
+      لأن العقد المثبَّت للبيانات لا يحتوي على الأدوات الصحية — ويجب إظهاره في البيان
+      الحسابي كبدل تقديري صراحةً. عند ترك internal_corners_count = 0 يستعمل المحرك عدد
+      جدران الفراغ (بحد أدنى 4) ويُعلن ذلك.
+    waste_rationale: >-
+      10%: the cartridge tip dries between sessions and part is wasted, tooling with a
+      finger or a spatula removes excess that cannot be recovered, and a crooked bead is
+      cut out and re-run.
+    notes_ar: >-
+      الوحدة م.ط. مدرج غالباً ضمن سعر التبليط في العقود الخاصة؛ يظهر كبند مستقل في
+      المواصفات الفندقية والمشاريع الحكومية. تنبيه: استعمال الروبة الأسمنتية بدل السيليكون
+      في فاصل الأرضية-الجدار سبب رئيسي لتشقق الحمامات — بند مواصفة لا بند كمية. مثال:
+      «فاصل أرضية-جدار = 8.40 − 0.80 = 7.60 م.ط | أركان 4 × 2.80 = 11.20 م.ط | بدل
+      تقديري 6.00 م.ط | الصافي 24.80 م.ط | هدر 10% ⇒ 27.28 م.ط».
+
+  # ============================== جبس بورد ================================= #
+
+  gypsum_board_ceiling_flat:
+    code: GYP-CEIL-FLT
+    name_ar: "سقف مستعار جبس بورد مسطح شامل الهيكل المعدني والمعجون والتحضير للدهان"
+    surface: ceiling
+    unit: m2
+    labor_included: true
+    formula: "floor_area - ceiling_void_area"
+    deduct_openings: false
+    deduct_threshold_m2: 1.00
+    add_reveals: false
+    waste_pct: 0.10
+    spec_params:
+      board_type: standard
+      board_thickness_mm: 12.5
+      frame_type: furring_channel
+      frame_spacing_cm: 40
+      moisture_resistant: false
+      fire_rated: false
+      finish_level: Q2
+      ceiling_openings_m2: []
+      ceiling_deduct_threshold_m2: 1.00
+    deduction_rule_ar: >-
+      لا تُخصم أي فتحة سقفية مساحتها أقل من 1.00 م٢ (ceiling_deduct_threshold_m2). فتحات
+      السبوت لايت والكشافات وديفيوزر التكييف وكواشف الحريق والمرشات: لا تُخصم إطلاقاً مهما
+      كان عددها، لأن قص الفتحة وتقوية حوافها يستهلك مادة وعملاً أكثر مما تزيله من مساحة.
+      المناور وفتحات المصاعد وآبار السلالم تُخصم بالكامل إذا تجاوزت العتبة. تصريح صريح: هذه
+      اتفاقية مهنية وليست نصاً مُلزِماً، ولذلك يجب أن يعرضها المحرك كمعامل قابل للضبط لكل
+      مشروع.
+    waste_rationale: >-
+      Board sheets are 1.20 x 2.40 m (some offices stock 1.20 x 3.00). Cutting loss at
+      room edges, around columns and at service penetrations gives 8-12%. Gypsum board
+      edges crush easily so handling damage adds two points. 10% is the standard Levant
+      allowance for a flat ceiling in a rectangular room; 12-15% for irregular polygons
+      with many re-entrant corners.
+    notes_ar: >-
+      العرف الشامي: السقف المستعار يُقاس بالمسطح الأفقي المسقط بالمتر المربع، والسعر شامل
+      الهيكل المعدني (الأومقا والفيرست والسي شانل والمعلاقات) والمسامير والمعجون وشريط
+      الفايبر والوجه التأسيسي. الكرنيش والنزلات تُقاس ببنود مستقلة. بعض مكاتب الخليج تخصم
+      كل الفتحات مهما صغرت؛ الافتراضي هنا العرف الشامي: لا خصم تحت 1 م٢. إذا كان السقف على
+      أكثر من منسوب تُقاس كل مساحة أفقية بمنسوبها ضمن نفس البند وتُفرد النزلة الرأسية ببند
+      GYP-CEIL-BLK بالمتر الطولي منعاً للازدواج.
+
+  gypsum_board_ceiling_bulkhead:
+    code: GYP-CEIL-BLK
+    name_ar: "نزلة جبس بورد (كشفة رأسية / بلك هيد) بين مناسيب السقف"
+    surface: ceiling
+    unit: m
+    labor_included: true
+    formula: "bulkhead_run + corner_allowance_on * corner_count * corner_allowance_m"
+    deduct_openings: false
+    deduct_threshold_m2: 0.0
+    add_reveals: false
+    waste_pct: 0.12
+    unit_switch:
+      param: drop_height_m
+      above: 0.50
+      unit: m2
+      multiply_by: bulkhead_girth_m
+    spec_params:
+      bulkhead_run_m: 0.0
+      drop_height_m: 0.25
+      horizontal_return_m: 0.30
+      bulkhead_girth_m: 0.55
+      shape: straight
+      board_thickness_mm: 12.5
+      corner_bead_type: metal
+      corner_count: 0
+      corner_allowance_m: 0.10
+      corner_allowance_on: false
+      bulkhead_m2_switch_m: 0.50
+    deduction_rule_ar: >-
+      لا يوجد خصم فتحات إطلاقاً — النزلة عنصر خطي يمر فوق الفتحات عند السقف. يُقاس الطول من
+      داخل الزاوية إلى داخل الزاوية على مسار النزلة، وتُقاس الزوايا بالطول المحوري الخارجي.
+      يُضاف اختيارياً بدل قص لكل زاوية خارجية عند تفعيل corner_allowance_on. تحذير ازدواج:
+      طول النزلة يجب ألا يُحسب مرة ثانية ضمن مساحة السقف المسطح، ويجب أن يظهر ذلك صراحةً في
+      البيان الحسابي. عند غياب مدخل صريح (bulkhead_run_m = 0) يستعمل المحرك محيط الفراغ
+      ويُعلن ذلك.
+    waste_rationale: >-
+      Bulkheads are cut as narrow strips from full sheets, so the off-cut ratio is
+      structurally worse than a flat ceiling: a 25 cm strip from a 120 cm sheet leaves
+      awkward remainders. Curved bulkheads reach 20-25% because the board is scored and
+      wetted and a proportion cracks.
+    notes_ar: >-
+      النزلة (الكشفة أو الدروب) هي الوجه الرأسي بين منسوبي سقف. العرف الشامي يقيسها بالمتر
+      الطولي ويُدرج في السعر ارتفاع حتى 30 سم شاملاً الوجه الأفقي الراجع. إذا زاد الارتفاع
+      عن 50 سم تعتبرها أغلب المكاتب مساحة م٢ = الطول × (الارتفاع + المرتد الأفقي) — وهذا ما
+      ينفّذه unit_switch عبر bulkhead_girth_m. النزلة الدائرية تُسعّر ببند منفصل بزيادة
+      40–60% وبنسبة هدر أعلى.
+
+  gypsum_board_wall_lining:
+    code: GYP-WALL-LIN
+    name_ar: "تلبيس جدران / قواطع جبس بورد على هيكل معدني"
+    surface: wall
+    unit: m2
+    labor_included: true
+    formula: "(banded_gross_area - banded_openings_deduct) * faces"
+    band_height_param: clad_height_m
+    deduct_openings: true
+    deduct_threshold_m2: 1.00
+    add_reveals: false
+    waste_pct: 0.12
+    spec_params:
+      faces: 1
+      clad_height_m: 0.0
+      board_thickness_mm: 12.5
+      stud_type: C75
+      stud_spacing_cm: 60
+      insulation: false
+      moisture_resistant: false
+      fire_rated: false
+      sill_height_m: 0.90
+    deduction_rule_ar: >-
+      تُخصم كل فتحة (باب/شباك/قوس) مساحتها ≥ 1.00 م٢ بالكامل. الفتحات الأصغر (الطاقات،
+      الكوات الصغيرة، فتحات الخدمة) لا تُخصم. الكوة الصغيرة لا تُخصم لأن تجليد داخلها
+      يستهلك ألواحاً أكثر مما وفّرته. تصريح صريح: عتبة الـ 1.00 م٢ اتفاقية مهنية قابلة
+      للضبط وليست قاعدة إلزامية. الكشفات حول الفتحات المخصومة لا تُضاف هنا تلقائياً بل
+      تُقاس ببند مستقل GYP-REV-JMB بالمتر الطولي.
+    waste_rationale: >-
+      Wall lining wastes more than ceilings: sheets must be cut around door and window
+      openings, and the strips above and below windows rarely come out of off-cuts
+      cleanly. A 2.40-3.00 m wall height against a 2.40 m sheet forces a horizontal
+      joint and a cut strip in every bay. 12% is the working Levant figure; 15% where
+      wall height exceeds 3.00 m or openings exceed 25% of the wall face.
+    notes_ar: >-
+      السعر شامل الفريم المعدني (U و C ستود) والصوف الصخري إن نُص عليه والمعجون وشريط
+      الفايبر والزوايا المعدنية. في الأردن ولبنان الشائع خصم الفتحات فوق 1 م٢؛ بعض مكاتب
+      دمشق ترفع العتبة إلى 1.5 م٢ وبعضها لا يخصم إلا فوق 2 م٢ في القواطع. للقواطع المزدوجة
+      الوجه يُقاس الوجهان (faces=2) ويجب أن يبيّن البيان الحسابي عدد الأوجه صراحةً منعاً
+      للنزاع. clad_height_m = 0 تعني كامل ارتفاع الفراغ.
+
+  gypsum_reveal_jamb:
+    code: GYP-REV-JMB
+    name_ar: "كشفات ومرتدات جبس بورد حول الفتحات (تجليد جوانب الأبواب والشبابيك)"
+    surface: wall
+    unit: m
+    labor_included: true
+    formula: "reveal_item_on * deductible_reveal_run"
+    deduct_openings: true
+    deduct_threshold_m2: 1.00
+    add_reveals: true
+    waste_pct: 0.15
+    unit_switch:
+      param: reveal_depth_m
+      above: 0.35
+      unit: m2
+      multiply_by: reveal_depth_m
+    spec_params:
+      reveal_depth_m: 0.20
+      board_thickness_mm: 12.5
+      corner_bead_type: metal
+      reveals_included_in_wall_rate: false
+    deduction_rule_ar: >-
+      قاعدة صارمة وهي مصدر نزاع رئيسي على الموقع: تُقاس الكشفات فقط للفتحات التي خُصمت
+      مساحتها فعلاً من بند الجدار/السقف. الفتحة التي لم تُخصم (لأن مساحتها < حد الخصم) لا
+      تُقاس كشفاتها، لأن مساحتها بقيت محسوبة ضمن المسطح الإجمالي وهذا يعوّض تجليد جوانبها.
+      لا يوجد خصم داخل هذا البند. القاعدة تُطبَّق آلياً بربط البند بنتيجة الخصم في البند
+      الأم (نفس deduct_threshold_m2) لا بتقدير المساح. للأبواب: جانبان + العتب فقط؛
+      للشبابيك: المحيط الكامل بما فيه الجلسة.
+    waste_rationale: >-
+      Reveals are the worst off-cut geometry in the gypsum package: narrow 20-30 cm
+      strips, each a different length, cut from 1.20 m wide sheets. Real site waste is
+      15-20%, plus corner-bead breakage. This is the single line most often
+      under-measured and then claimed back as a variation.
+    notes_ar: >-
+      الكشفة (المرتد أو الرجعة، وفي مصر النكاشة) هي تجليد جانب الفتحة بعمق الجدار. القاعدة
+      الذهبية للمساح: خُصمت الفتحة ⟵ تُقاس كشفاتها؛ لم تُخصم ⟵ لا تُقاس. اختلاف إقليمي
+      حقيقي: بعض مكاتب بيروت تُدرج الكشفة ضمن سعر متر الجبس بورد ولا تفردها كبند؛ لذلك
+      يوفّر المحرك مفتاح reveals_included_in_wall_rate لمنع الازدواج في التسعير.
+
+  gypsum_cornice_decorative:
+    code: GYP-CRN-DEC
+    name_ar: "كرنيش جبس مزخرف (كورنيش بلدي / جبس عربي) بالمتر الطولي"
+    surface: ceiling
+    unit: m
+    labor_included: true
+    formula: >-
+      perimeter_m + island_perimeter_m
+      - subtract_full_height_openings * full_height_opening_run
+      + mitre_allowance_on * corner_count * mitre_allowance_m
+    deduct_openings: false
+    deduct_threshold_m2: 0.0
+    add_reveals: false
+    waste_pct: 0.15
+    spec_params:
+      profile_width_mm: 100
+      profile_projection_mm: 100
+      pattern: plain
+      cast_type: site_cast
+      corner_count: 0
+      mitre_allowance_m: 0.15
+      mitre_allowance_on: false
+      subtract_full_height_openings: false
+      island_perimeter_m: 0.0
+    deduction_rule_ar: >-
+      الكرنيش المحيطي يُقاس على كامل المحيط بدون أي خصم لفتحات الأبواب أو الشبابيك، لأن
+      الكرنيش يمر فوقها عند مستوى السقف. الاستثناء الوحيد: الفتحة الممتدة من الأرض حتى
+      السقف (قوس بلا عتب أو فتحة معمارية كاملة الارتفاع) يُخصم عرضها لأن الكرنيش ينقطع
+      فعلياً. تُقاس الزوايا بالطول المحوري الخارجي دون زيادة نظرية، ويُغطّى القص المائل
+      بنسبة الهدر أو ببدل mitre_allowance_m عند تفعيله. عند وجود جزر أو نزلات داخلية يُضاف
+      محيطها عبر island_perimeter_m.
+    waste_rationale: >-
+      Decorative cornice is cast in fixed 2.00 or 2.50 m lengths and every internal and
+      external corner needs a mitre cut that destroys the tail of the piece.
+      Pattern-matching on a repeating motif forces alignment cuts and pushes waste to
+      15-20%. Handling breakage of long thin cast sections is real: about 5% of pieces
+      arrive or end up cracked.
+    notes_ar: >-
+      السعر شامل التثبيت بالجبس البلدي أو الغراء والمعجون وسد الفواصل والتحضير للدهان.
+      الكرنيش الذي يزيد تطويره عن 25 سم أو المركّب على مستويين يُسعّر ببند منفصل. الزخارف
+      المصبوبة يدوياً (الوردات والروزيتات والتيجان) تُقاس بالعدد لا بالمتر — انظر
+      GYP-ROS-DEC.
+
+  gypsum_rosette_decorative:
+    code: GYP-ROS-DEC
+    name_ar: "وردة / روزيتة جبس مزخرفة وقطع الزينة المصبوبة (بالعدد)"
+    surface: ceiling
+    unit: "no"
+    labor_included: true
+    formula: "piece_count"
+    deduct_openings: false
+    deduct_threshold_m2: 0.0
+    add_reveals: false
+    waste_pct: 0.05
+    waste_on_count: true
+    spec_params:
+      diameter_cm: 60
+      piece_type: rosette
+      pattern: null
+      count: 0
+    deduction_rule_ar: >-
+      لا يوجد خصم فتحات؛ البند بالعدد. الأهم: مساحة الروزيتة لا تُخصم من مساحة السقف الجبس
+      بورد لأن الروزيتة تُركّب فوق السقف لا بدلاً منه. هذه نقطة نزاع شائعة مع المالك ويجب
+      أن يذكرها البيان الحسابي صراحةً. التقريب لأعلى إلزامي لأن الوحدة عدد لا يتجزأ.
+    waste_rationale: >-
+      Cast decorative pieces are ordered per piece and used whole, so the only allowance
+      is transit and site breakage. 5% covers one cracked piece in twenty, which is
+      realistic for hand-cast gypsum.
+    notes_ar: >-
+      تُقاس بالعدد (قطعة/حبة) في كل بلاد الشام، ويجب ذكر القطر في وصف البند لأن السعر
+      يتغيّر جذرياً بين وردة 40 سم ووردة 100 سم. تنبيه تعاقدي: السقف يُقاس كاملاً والروزيتة
+      تُضاف فوقه بلا خصم.
+
+  gypsum_access_hatch:
+    code: GYP-ACC-HTC
+    name_ar: "باب تفتيش / فتحة خدمة في السقف المستعار (بالعدد)"
+    surface: ceiling
+    unit: "no"
+    labor_included: true
+    formula: "piece_count"
+    deduct_openings: false
+    deduct_threshold_m2: 0.0
+    add_reveals: false
+    waste_pct: 0.0
+    waste_on_count: false
+    spec_params:
+      hatch_size_cm: 60x60
+      hatch_type: push_open
+      is_fire_rated: false
+      count: 0
+    deduction_rule_ar: >-
+      لا تُخصم مساحة باب التفتيش من مساحة السقف الجبس بورد ما دامت أقل من 1.00 م٢ — وهو
+      الحال دائماً تقريباً (60×60 سم = 0.36 م٢). البند يُضاف بالعدد فوق مساحة السقف
+      الكاملة. نقطة نزاع متكررة: المقاول يطالب بالمساحة كاملة والمالك يطلب الخصم؛ العرف مع
+      المقاول لأن قص الفتحة وتقوية إطارها عمل إضافي لا وفر.
+    waste_rationale: >-
+      Manufactured item supplied per piece: no cutting loss and no material allowance.
+      Breakage is a supplier replacement, not a measured waste.
+    notes_ar: >-
+      تُقاس بالعدد ويُذكر المقاس في الوصف (60×60 سم هو الشائع في بلاد الشام). السعر شامل
+      الإطار والقفل والمفصلات والتثبيت والدهان لمطابقة لون السقف.
+
+  # ======================= تكسية حجر وألوكوبوند وخشب ======================= #
+
+  stone_cladding_external_facade:
+    code: STN-CLD-FAC
+    name_ar: "تكسية حجرية خارجية (طبزة / مسمسم / مفزّع) على الواجهات"
+    surface: facade
+    unit: m2
+    labor_included: true
+    formula: "external_wall_area - external_openings_deduct + column_faces_area_m2"
+    deduct_openings: true
+    deduct_threshold_m2: 2.00
+    add_reveals: false
+    waste_pct: 0.15
+    spec_params:
+      stone_type: limestone
+      finish_type: tobzeh
+      thickness_cm: 3
+      course_height_cm: 24
+      fixing_method: mortar_with_anchors
+      joint_width_mm: 10
+      pointing_type: recessed
+      facade_deduct_threshold_m2: 2.00
+      column_faces_area_m2: 0.0
+    deduction_rule_ar: >-
+      العرف الشامي في الحجر: تُخصم فقط الفتحات التي تزيد مساحتها عن 2.00 م٢. العتبة أعلى
+      من عتبة الجبس والدهان عمداً لأن القص والتقصيب حول الفتحة الحجرية مكلف ويستهلك ألواحاً
+      كاملة. الفتحات الأصغر (شبابيك الحمامات، فتحات التهوية، الطاقات) لا تُخصم إطلاقاً.
+      تصريح صريح: هذه اتفاقية لا قاعدة معيارية — بعض مكاتب عمّان تستخدم 1.50 م٢ وبعض
+      المقاولين يطالبون بعدم الخصم تحت 3.00 م٢، فيجب أن يكون المعامل قابلاً للضبط ومُعلناً
+      في مقدمة جدول الكميات. تُضاف أوجه الأعمدة والبروزات والدروات بأبعادها الفعلية عبر
+      column_faces_area_m2. الكشفات حول الفتحات المخصومة تُضاف دائماً ببند مستقل
+      STN-REV-JMB ولا تُضاف هنا.
+    waste_rationale: >-
+      Natural stone is the highest-waste cladding in normal practice, from four
+      independent sources: (1) cutting to course heights and around openings; (2) colour
+      and vein sorting - a genuine 4-6% of delivered slabs is rejected on site for
+      colour mismatch; (3) breakage of 3 cm panels during handling and hoisting; (4)
+      external corners and returns each consume a full panel. 15% for standard ashlar;
+      18-20% for random coursing and strongly veined stone that must be book-matched.
+    notes_ar: >-
+      السعر في الأردن وفلسطين وسوريا شامل التوريد والتقصيب والتركيب ومونة التثبيت أو
+      الأنكرات الستانلس والمواسير الخلفية والترويب والتنظيف والتشحيل النهائي ما لم يُنص على
+      خلافه. الزوايا الخارجية (الكوينات) تُقاس بالمتر الطولي ببند منفصل لأنها تحتاج قطع 45
+      درجة أو حجر بجناحين. السماكة 3 سم للتلبيس بالمونة و 2–2.5 سم للتعليق الميكانيكي. يجب
+      التصريح في وصف البند إن كان القياس على الوجه الصافي أم على المسطح الإجمالي.
+
+  stone_cladding_reveal_jamb:
+    code: STN-REV-JMB
+    name_ar: "كشفات ومرتدات حجرية حول الفتحات وعتبات وجلسات الشبابيك"
+    surface: facade
+    unit: m
+    labor_included: true
+    formula: >-
+      reveal_item_on * (external_reveal_run
+      - separate_sill_item * external_window_sill_run)
+    deduct_openings: true
+    deduct_threshold_m2: 2.00
+    add_reveals: true
+    waste_pct: 0.20
+    unit_switch:
+      param: reveal_depth_m
+      above: 0.30
+      unit: m2
+      multiply_by: reveal_depth_m
+    spec_params:
+      reveal_depth_m: 0.25
+      stone_type: limestone
+      thickness_cm: 3
+      separate_sill_item: false
+      has_drip_groove: true
+      facade_deduct_threshold_m2: 2.00
+      reveals_included_in_wall_rate: false
+    deduction_rule_ar: >-
+      تُقاس الكشفات فقط للفتحات التي خُصمت فعلاً في بند STN-CLD-FAC (أي مساحتها ≥ حد الخصم
+      2.00 م٢). الفتحات غير المخصومة لا تُقاس كشفاتها لأن مساحتها بقيت ضمن المسطح المدفوع.
+      لا يوجد خصم داخل هذا البند. الجلسة السفلية تدخل ضمن المحيط للشبابيك، لكن كثيراً من
+      مكاتب عمّان ودمشق تفردها ببند مستقل لأن سماكتها أكبر (5 سم بدل 3 سم) وتحتاج ميلاناً
+      وقناة تنقيط (درافة) — يُفعَّل separate_sill_item فيُطرح طول الجلسات من هذا البند
+      ويُنقل إلى بند العتبات.
+    waste_rationale: >-
+      Stone reveals are cut from full slabs into narrow strips with mitred external
+      corners and the off-cut is usually unusable. Sills need a drip groove and a
+      weathering slope, meaning thicker stock and more rejects. 20% is realistic and
+      this line is routinely under-priced.
+    notes_ar: >-
+      الكشفة الحجرية تُقاس بالمتر الطولي بنفس القاعدة الذهبية: خُصمت الفتحة ⟵ تُقاس كشفتها.
+      عتبات الأبواب الخارجية والمداخل والدرج بند مستقل بالمتر الطولي.
+
+  stone_cladding_internal_wall:
+    code: STN-CLD-INT
+    name_ar: "تكسية حجرية / رخامية داخلية لتلبيس الجدران"
+    surface: wall
+    unit: m2
+    labor_included: true
+    formula: "banded_gross_area - banded_openings_deduct"
+    band_height_param: clad_height_m
+    deduct_openings: true
+    deduct_threshold_m2: 1.00
+    add_reveals: false
+    waste_pct: 0.12
+    spec_params:
+      stone_type: marble
+      finish_type: polished
+      thickness_cm: 2
+      clad_height_m: 0.0
+      fixing_method: mortar
+      book_matched: false
+      sill_height_m: 0.90
+    deduction_rule_ar: >-
+      تُخصم الفتحات الداخلية التي مساحتها ≥ 1.00 م٢ — عتبة أدنى من الواجهات الخارجية لأن
+      القص الداخلي أسهل وأرخص. عند التكسية الجزئية (حتى ارتفاع محدد clad_height_m) يُخصم
+      فقط الجزء من الفتحة الواقع داخل نطاق ارتفاع التكسية، وهذا مصدر نزاع متكرر مع الشبابيك
+      ذات الجلسة المرتفعة. تصريح: العتبة اتفاقية قابلة للضبط. الكشفات حول الفتحات المخصومة
+      تُقاس ببند منفصل.
+    waste_rationale: >-
+      Internal stone and marble waste less than external facade work: sheltered
+      handling, smaller panels, no hoisting breakage, fewer weather-driven rejections.
+      But colour sorting still applies and book-matched marble pushes it to 18%.
+    notes_ar: >-
+      إذا كانت التكسية بارتفاع جزئي (مثلاً تلبيس مدخل حتى 1.20 م) يُذكر الارتفاع صراحةً في
+      وصف البند. السعر شامل التثبيت والمونة أو الغراء والفواصل والجلي والتلميع إن نُص عليه.
+      الرخام ذو العرق (بوك ماتش) يحتاج رفع waste_pct إلى 0.18. clad_height_m = 0 تعني كامل
+      ارتفاع الفراغ.
+
+  aluminium_composite_cladding:
+    code: ACP-CLD-FAC
+    name_ar: "تكسية ألوكوبوند (ألواح ألمنيوم مركبة) على هيكل ألمنيوم شاملة الملحقات"
+    surface: facade
+    unit: m2
+    labor_included: true
+    formula: >-
+      measure_gross_no_deduction * external_wall_area
+      + (1 - measure_gross_no_deduction) * (external_wall_area - external_openings_deduct
+      + reveals_on * external_reveal_run * return_depth_m)
+    deduct_openings: true
+    deduct_threshold_m2: 1.00
+    add_reveals: true
+    waste_pct: 0.18
+    spec_params:
+      panel_thickness_mm: 4
+      skin_thickness_mm: 0.40
+      core_type: fr
+      finish_color: null
+      fold_depth_mm: 30
+      return_depth_m: 0.20
+      frame_type: aluminium
+      fire_rating: FR
+      measure_gross_no_deduction: false
+      acp_deduct_threshold_m2: 1.00
+    deduction_rule_ar: >-
+      تُخصم كل فتحة ≥ 1.00 م٢ بالكامل. الفتحات الأصغر (فتحات التهوية، مخارج التكييف، وحدات
+      الإنارة على الواجهة) لا تُخصم لأن اللوح يُقص حولها ويُهدر محيطها. الأهم وسبب النزاع
+      الأول في هذا البند: مساحة المرتد/الرجعة داخل الفتحة (عادة 15–25 سم) تُضاف إلى المساحة
+      الصافية لأن اللوح يُثنى ويدخل داخل الفتحة ويستهلك مادة فعلية؛ أما الطيّة الحافية
+      (25–35 مم) فهي مغطاة ضمن نسبة الهدر ولا تُقاس كمساحة منفصلة منعاً للازدواج. بعض
+      المكاتب تقيس الألوكوبوند بالمسطح الإجمالي بلا خصم مقابل سعر أقل — ولذلك
+      measure_gross_no_deduction، ويجب التصريح بالطريقة في وصف البند.
+    waste_rationale: >-
+      ACP is the highest-waste facade system in normal practice. Panels come
+      1.22 x 2.44 m (or 1.50 x 3.20/4.00 m) and every finished piece needs a 25-35 mm
+      fold on all four edges, so the usable area of each cut piece is smaller than its
+      nominal size. Add routed V-grooves consuming material, colour-batch matching
+      forcing rejection of off-batch sheets, protective-film scratches during handling,
+      and facade grids that never align with sheet dimensions. 18% for a standard grid;
+      22-25% for many small panels, curves, or large signage cut-outs.
+    notes_ar: >-
+      السعر في بلاد الشام شامل التوريد والقص والتكسير (الطي) والهيكل الألمنيوم والزوايا
+      والريفيتات أو التعليق الميكانيكي والسيليكون والشريط اللاصق ثنائي الوجه وإزالة الفيلم
+      الحامي والتنظيف. يجب النص على سماكة اللوح (4 مم شائعة) وسماكة قشرة الألمنيوم
+      (0.30/0.40/0.50 مم) لأن الفرق السعري جوهري، وعلى نوع الحشوة (عادي / FR / A2).
+
+  aluminium_composite_ceiling_soffit:
+    code: ACP-CEIL-SFT
+    name_ar: "تكسية ألوكوبوند للأسقف الخارجية والبروزات (السوفيت) شاملة الفاشيا"
+    surface: ceiling
+    unit: m2
+    labor_included: true
+    formula: "soffit_area - ceiling_void_area + perimeter_m * fascia_height_m"
+    deduct_openings: false
+    deduct_threshold_m2: 1.00
+    add_reveals: false
+    waste_pct: 0.20
+    spec_params:
+      panel_thickness_mm: 4
+      core_type: fr
+      fascia_height_m: 0.30
+      soffit_area_m2: 0.0
+      fire_rating: FR
+      ceiling_openings_m2: []
+      ceiling_deduct_threshold_m2: 1.00
+    deduction_rule_ar: >-
+      تُخصم فقط الفتحات السقفية ≥ 1.00 م٢ (مناور، فتحات إنارة كبيرة). السبوتات
+      والديفيوزرات وكواشف الحريق لا تُخصم. الحافة الرأسية (الفاشيا) تُضاف كمساحة داخل هذا
+      البند ولا تُقاس بالمتر الطولي ضمن بند الواجهة ACP-CLD-FAC منعاً للازدواج — يجب أن
+      يُظهر البيان الحسابي مساحة السوفيت ومساحة الفاشيا كسطرين مستقلين. عند ترك
+      soffit_area_m2 = 0 يستعمل المحرك مساحة أرضية الفراغ (المسقط الأفقي) ويُعلن ذلك.
+    waste_rationale: >-
+      Soffits waste more than vertical facades: every edge is folded, overhead fixing
+      damages panel faces, and balcony projections of 1.20-1.80 m rarely divide cleanly
+      into the 1.22 m panel width, leaving a narrow unusable strip on every run. 20% is
+      the honest figure.
+    notes_ar: >-
+      السوفيت (بطنية البروز أو البلكونة) يُقاس بالمسطح الأفقي المسقط وتُضاف الفاشيا كمساحة
+      ضمن نفس البند. تنبيه: كثير من المساحين ينسون الفاشيا فيخرج البند ناقصاً 15–20%. أغلب
+      الكودات تفرض حشوة مقاومة للحريق في الأسقف الخارجية والبروزات.
+
+  wood_cladding_wall:
+    code: WOD-CLD-WAL
+    name_ar: "تكسية جدران بالخشب (ألواح / قشرة طبيعية / MDF مقشور) على هيكل خلفي"
+    surface: wall
+    unit: m2
+    labor_included: true
+    formula: "banded_gross_area - banded_openings_deduct"
+    band_height_param: clad_height_m
+    deduct_openings: true
+    deduct_threshold_m2: 0.50
+    add_reveals: false
+    waste_pct: 0.15
+    spec_params:
+      wood_type: veneer_mdf
+      board_width_cm: 12
+      thickness_mm: 18
+      layout_direction: vertical
+      clad_height_m: 0.0
+      finish_coating: lacquer
+      backing_frame: battens
+      sill_height_m: 0.90
+    deduction_rule_ar: >-
+      عتبة الخصم للخشب أدنى: 0.50 م٢ بدل 1.00 م٢ للجبس و 2.00 م٢ للحجر، لأن قص الخشب سهل
+      ورخيص بينما مادته باهظة، فلا يُقبل تحميل المالك مساحة غير منفّذة. تُخصم كل فتحة ≥
+      0.50 م٢؛ الأصغر لا تُخصم. عند التكسية الجزئية يُخصم فقط الجزء الواقع ضمن ارتفاع
+      التكسية. تصريح: العتبة اتفاقية قابلة للضبط. الكشفات حول الفتحات المخصومة تُقاس ببند
+      WOD-REV-JMB بالمتر الطولي، وحواف الإنهاء والبروفايلات بالمتر الطولي منفصلة.
+    waste_rationale: >-
+      Two drivers tiles do not have. First, grain and tone matching: boards are sorted
+      on site and off-tone pieces are rejected or relegated to hidden runs, typically
+      5-7%. Second, modular board widths (10-15 cm) or 1.22 x 2.44 m sheets that do not
+      divide into the wall height, forcing a cut strip on every run. 15% for straight
+      boarding; 20-22% for diagonal or chevron because every board is double-mitred;
+      25% for slatted or fluted panels needing pattern continuity across joints.
+    notes_ar: >-
+      السعر شامل الهيكل الخلفي (الكرستة/القوائم) والتثبيت والغراء والمسامير المخفية
+      والصنفرة، أما اللاكيه أو الورنيش فيُدرج إن نُص عليه وإلا يُفرد ببند دهان مستقل. يجب
+      النص على نوع الخشب والسماكة واتجاه التركيب لأن الاتجاه المائل أو الشيفرون يرفع الهدر
+      والأجرة جوهرياً. الخشب في المناطق الرطبة يحتاج مواصفة مقاومة للرطوبة وإلا سقط الضمان.
+
+  wood_cladding_ceiling:
+    code: WOD-CEIL-CLD
+    name_ar: "تكسية أسقف بالخشب (سقف خشبي / شرائح مشرّحة معلقة)"
+    surface: ceiling
+    unit: m2
+    labor_included: true
+    formula: "floor_area - ceiling_void_area"
+    deduct_openings: false
+    deduct_threshold_m2: 1.00
+    add_reveals: false
+    waste_pct: 0.15
+    spec_params:
+      wood_type: oak_veneer
+      slat_width_cm: 4
+      slat_pitch_cm: 8
+      is_open_slat: false
+      thickness_mm: 18
+      finish_coating: lacquer
+      backing_frame: metal
+      ceiling_openings_m2: []
+      ceiling_deduct_threshold_m2: 1.00
+    deduction_rule_ar: >-
+      لا تُخصم فتحات الإنارة السبوت ولا الديفيوزرات ولا كواشف الحريق. تُخصم فقط الفتحات
+      السقفية ≥ 1.00 م٢. قاعدة حاسمة للسقف المشرّح (السلات): المساحة تُقاس كاملة كمسطح أفقي
+      ولا يُخصم الفراغ بين الشرائح — الفراغ جزء من التصميم لا نقص في التنفيذ. هذه أكثر نقاط
+      النزاع تكراراً في الأسقف الخشبية المشرّحة، ويجب أن ينص عليها وصف البند ويُظهرها البيان
+      الحسابي صراحةً. النزلات والحواف تُقاس بالمتر الطولي ببند مستقل.
+    waste_rationale: >-
+      Same grain-matching and modularity losses as wall cladding, plus overhead
+      installation damage and the requirement that ceiling runs be continuous
+      end-to-end for visual alignment, which forbids using short off-cuts in the field.
+      15% standard; 20% where the slat pitch must align to a lighting grid.
+    notes_ar: >-
+      يُقاس بالمسطح الأفقي المسقط بالمتر المربع، والسعر شامل الهيكل المعدني أو الخشبي
+      والمعلاقات والتثبيت والمعالجة.
+
+  wood_cladding_reveal_jamb:
+    code: WOD-REV-JMB
+    name_ar: "كشفات ومرتدات خشبية وحواف الإنهاء حول الفتحات"
+    surface: wall
+    unit: m
+    labor_included: true
+    formula: "reveal_item_on * deductible_reveal_run"
+    deduct_openings: true
+    deduct_threshold_m2: 0.50
+    add_reveals: true
+    waste_pct: 0.18
+    unit_switch:
+      param: reveal_depth_m
+      above: 0.30
+      unit: m2
+      multiply_by: reveal_depth_m
+    spec_params:
+      reveal_depth_m: 0.20
+      wood_type: veneer_mdf
+      thickness_mm: 18
+      edge_profile: square
+      reveals_included_in_wall_rate: false
+    deduction_rule_ar: >-
+      تُقاس الكشفات الخشبية فقط للفتحات التي خُصمت فعلاً في بند التكسية (≥ 0.50 م٢
+      افتراضياً). الفتحات غير المخصومة لا تُقاس كشفاتها. لا خصم داخل هذا البند. للأبواب
+      جانبان + العتب فقط بلا مرتد سفلي؛ للشبابيك المحيط الكامل. بروفايلات الإنهاء عند حافة
+      التكسية تُقاس بالمتر الطولي ضمن هذا البند أو ببند مستقل حسب المواصفة.
+    waste_rationale: >-
+      Narrow strips cut from full boards or sheets with mitred corners; the grain must
+      run continuously around the opening so a mismatched piece is scrapped rather than
+      used. 18% is the working figure.
+    notes_ar: >-
+      اتجاه العرق (الڤين) حول الفتحة هو ما يرفع الهدر. بعض المكاتب تُدرج الكشفة ضمن سعر متر
+      التكسية، لذا يوفّر المحرك مفتاح reveals_included_in_wall_rate لمنع الازدواج.
+
+# ---------------------------------------------------------------------------
+# مسرد المصطلحات — لتوحيد لغة التقرير العربي بين المحرك والمكتب.
+# ---------------------------------------------------------------------------
+glossary:
+  - {ar: "جدول الكميات / المقايسة", en: "Bill of Quantities (BOQ)"}
+  - {ar: "حصر الكميات", en: "Quantity take-off"}
+  - {ar: "أعمال الأكساء والتشطيبات", en: "Finishing works"}
+  - {ar: "صافي الكمية", en: "Net quantity — المقاسة من المخطط، وهي المعتمدة للمستخلص"}
+  - {ar: "إجمالي الكمية / كمية التوريد", en: "Gross quantity — الصافي + الهدر، للشراء لا للدفع"}
+  - {ar: "الهدر / الفاقد / الهالك", en: "Waste allowance"}
+  - {ar: "حد الخصم", en: "Deduction threshold — عرف مهني قابل للضبط لا قاعدة معيارية"}
+  - {ar: "كشفة / مرتد / رجعة", en: "Reveal / jamb / return"}
+  - {ar: "جلسة الشباك", en: "Window sill"}
+  - {ar: "عتب الفتحة", en: "Lintel soffit / opening head"}
+  - {ar: "كوّة / نيتش", en: "Niche — تُضاف ولا تُخصم"}
+  - {ar: "وزرة / نعلة / سكيرتنج", en: "Skirting"}
+  - {ar: "عتبة الباب", en: "Threshold / door saddle — بند مستقل لا يدخل في الوزرة"}
+  - {ar: "قائم / نائم (قلبة) / أنف الدرجة", en: "Riser / tread / nosing"}
+  - {ar: "المسطح المنشور", en: "Developed / girth area"}
+  - {ar: "المسطح الأفقي المسقط", en: "Horizontal projected area"}
+  - {ar: "قصارة / بياض / لياسة", en: "Plaster / render"}
+  - {ar: "طرطشة", en: "Spatterdash / key coat"}
+  - {ar: "بؤج ومرابيع", en: "Screed dots and ribs"}
+  - {ar: "روبة / فوغة", en: "Grout"}
+  - {ar: "رفعة العزل", en: "Waterproofing upstand"}
+  - {ar: "تراكب", en: "Overlap / lap — يُغطى بالهدر ولا يُقاس مساحةً"}
+  - {ar: "نزلة / بلك هيد", en: "Bulkhead / ceiling drop"}
+  - {ar: "التكسير / الطي", en: "ACP edge folding — يستهلك مادة لا تظهر على الواجهة"}
+  - {ar: "البيان الحسابي", en: "Measurement breakdown / audit trail"}
+  - {ar: "مطالبة مزدوجة", en: "Double counting — الخطر الأول في محرك الحصر"}
+  - {ar: "مستخلص", en: "Interim payment certificate"}
