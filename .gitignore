@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Data — the SQLite store is runtime state, not source
+data/*.db
+data/*.db-journal
+
+# Real project data from the architect: plans, actual BOQs, real prices.
+# Client names and priced quotes live here — never commit them.
+data/real_projects/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
