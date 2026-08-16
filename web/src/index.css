@@ -1,0 +1,255 @@
+@import 'tailwindcss';
+
+/* ==========================================================================
+   Design tokens — defined ONCE here, consumed only through Tailwind utilities.
+
+   Every token is a raw CSS custom property on :root, re-declared under
+   `prefers-color-scheme: dark`, and then mapped into Tailwind with `@theme
+   inline` so a utility like `bg-surface` compiles to `var(--surface)` directly.
+   That indirection is what makes the dark theme free: no `dark:` prefix is ever
+   written in a component, so no component can forget one.
+   ========================================================================== */
+
+:root {
+  color-scheme: light dark;
+
+  /* -- surfaces & text --------------------------------------------------- */
+  --bg: oklch(98.4% 0.003 240);
+  --surface: oklch(100% 0 0);
+  --surface-2: oklch(96.6% 0.004 240);
+  --surface-3: oklch(93.6% 0.006 240);
+  --border: oklch(89.5% 0.008 240);
+  --border-strong: oklch(80% 0.012 240);
+  --fg: oklch(21% 0.02 250);
+  --fg-muted: oklch(50% 0.016 250);
+  --fg-subtle: oklch(63% 0.014 250);
+
+  /* -- brand: a surveyor's blue, plus a site-tape amber for accents ------- */
+  --primary: oklch(52% 0.13 250);
+  --primary-hover: oklch(46% 0.135 250);
+  --primary-fg: oklch(99% 0 0);
+  --primary-soft: oklch(94.5% 0.028 250);
+  --accent: oklch(70% 0.15 62);
+  --accent-fg: oklch(24% 0.06 62);
+  --accent-soft: oklch(95% 0.04 75);
+
+  /* -- semantic ---------------------------------------------------------- */
+  --success: oklch(58% 0.13 152);
+  --success-soft: oklch(94.5% 0.04 152);
+  --warn: oklch(66% 0.15 78);
+  --warn-soft: oklch(95.5% 0.05 85);
+  --danger: oklch(56% 0.19 26);
+  --danger-fg: oklch(99% 0 0);
+  --danger-soft: oklch(95.5% 0.03 26);
+  --info: oklch(58% 0.11 235);
+  --info-soft: oklch(95% 0.03 235);
+
+  --ring: oklch(58% 0.13 250);
+
+  /* -- elevation --------------------------------------------------------- */
+  --shadow-1: 0 1px 2px oklch(20% 0.03 250 / 0.06), 0 1px 1px oklch(20% 0.03 250 / 0.04);
+  --shadow-2: 0 2px 6px oklch(20% 0.03 250 / 0.07), 0 1px 2px oklch(20% 0.03 250 / 0.05);
+  --shadow-3: 0 10px 30px oklch(20% 0.03 250 / 0.12), 0 2px 8px oklch(20% 0.03 250 / 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: oklch(19.5% 0.012 250);
+    --surface: oklch(23.5% 0.014 250);
+    --surface-2: oklch(27.5% 0.016 250);
+    --surface-3: oklch(32% 0.018 250);
+    --border: oklch(33% 0.018 250);
+    --border-strong: oklch(43% 0.02 250);
+    --fg: oklch(95.5% 0.005 250);
+    --fg-muted: oklch(74% 0.014 250);
+    --fg-subtle: oklch(61% 0.014 250);
+
+    --primary: oklch(70% 0.12 250);
+    --primary-hover: oklch(76% 0.12 250);
+    --primary-fg: oklch(17% 0.03 250);
+    --primary-soft: oklch(31% 0.045 250);
+    --accent: oklch(78% 0.14 68);
+    --accent-fg: oklch(20% 0.05 68);
+    --accent-soft: oklch(32% 0.05 70);
+
+    --success: oklch(72% 0.13 152);
+    --success-soft: oklch(29% 0.05 152);
+    --warn: oklch(79% 0.14 82);
+    --warn-soft: oklch(31% 0.055 82);
+    --danger: oklch(68% 0.16 25);
+    --danger-fg: oklch(17% 0.04 25);
+    --danger-soft: oklch(30% 0.06 25);
+    --info: oklch(72% 0.1 235);
+    --info-soft: oklch(29% 0.045 235);
+
+    --ring: oklch(70% 0.12 250);
+
+    --shadow-1: 0 1px 2px oklch(0% 0 0 / 0.4);
+    --shadow-2: 0 2px 6px oklch(0% 0 0 / 0.45);
+    --shadow-3: 0 10px 30px oklch(0% 0 0 / 0.55), 0 2px 8px oklch(0% 0 0 / 0.4);
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--fg-muted);
+  --color-subtle: var(--fg-subtle);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-fg: var(--danger-fg);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --color-ring: var(--ring);
+
+  /* Arabic-capable stack. The first three cover Windows / macOS / Android with a
+     real Arabic face; Tahoma is the universal fallback that still shapes Arabic
+     correctly. system-ui is deliberately LAST — on some Linux builds it maps to a
+     Latin-only face and Arabic falls back to a mismatched substitute mid-word. */
+  --font-sans:
+    'IBM Plex Sans Arabic', 'Noto Sans Arabic', 'SF Arabic', 'Segoe UI', 'Dubai', 'Geeza Pro',
+    Tahoma, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', monospace;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+
+  --shadow-xs: var(--shadow-1);
+  --shadow-sm: var(--shadow-1);
+  --shadow-md: var(--shadow-2);
+  --shadow-lg: var(--shadow-3);
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    /* Arabic sits low in the em box; a slightly taller default line keeps
+       diacritics and descenders from colliding across a dense BOQ table. */
+    line-height: 1.65;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Western digits are the Levant construction convention: an interim
+     certificate is re-typed into Excel, and Arabic-Indic numerals do not
+     survive that copy. Force the Latin numeral set even when the shaping font
+     would otherwise substitute, and isolate every run so a number never
+     re-orders inside an RTL sentence. */
+  :where(input, textarea, select, table, .num) {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  ::placeholder {
+    color: var(--fg-subtle);
+    opacity: 1;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* Number inputs: the spinner is a rounding accident waiting to happen on a
+     measured dimension, and it renders on the wrong side under RTL anyway. */
+  input[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 999px;
+    border: 2px solid var(--bg);
+  }
+}
+
+@layer utilities {
+  /* Wrap any Western-digit run rendered inside Arabic prose. `isolate` is the
+     load-bearing part: without it "55.20 م²" can render as "م² 55.20" or worse,
+     split the decimal across the bidi boundary. */
+  .num {
+    direction: ltr;
+    unicode-bidi: isolate;
+    display: inline-block;
+  }
+
+  /* A latin/technical token (rule_key, code, id) inside RTL text. */
+  .ltr {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: start;
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
