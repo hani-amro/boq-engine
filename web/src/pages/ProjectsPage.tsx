@@ -1,10 +1,8 @@
 /**
  * SHELL PAGE — the projects list.
  *
- * Deliberately thin: it exists so the shell is demonstrably alive end to end
- * (fetch → render → create → navigate) and so the page agent building this screen
- * out has a working example of every primitive it needs. Replace the body freely;
- * keep the data plumbing.
+ * Deliberately thin: it shows the app working end to end
+ * (fetch → render → create → navigate).
  */
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
